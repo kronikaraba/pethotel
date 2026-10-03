@@ -1,0 +1,235 @@
+@import "tailwindcss";
+
+/*
+  PetHotel tasarım sistemi
+  - Gündüz (veteriner randevusu): açık zemin + çam yeşili
+  - Gece (pet otel / konaklama): gece mavisi + lamba sarısı
+*/
+@theme {
+  --color-paper: #f4f6f0;
+  --color-surface: #ffffff;
+  --color-ink: #16231e;
+  --color-stone: #56625c;
+  --color-line: #dfe4dc;
+  --color-line-strong: #c9d1c6;
+  --color-pine: #0f5c4a;
+  --color-pine-dark: #0a4537;
+  --color-pine-soft: #e3f1e9;
+  --color-meadow: #cfe8da;
+  --color-night: #1b2047;
+  --color-night-2: #252b5c;
+  --color-night-3: #343b75;
+  --color-night-ink: #e9ebff;
+  --color-night-muted: #aeb3dc;
+  --color-lamp: #ffc24b;
+  --color-lamp-soft: #fff3d6;
+  --color-coral: #c8412f;
+  --color-coral-soft: #fbe7e3;
+
+  --font-display: "Bricolage Grotesque Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Figtree Variable", ui-sans-serif, system-ui, sans-serif;
+
+  /* Klasik tipografik ölçek: 12 14 16 18 21 24 36 48 60 72 */
+  --text-xs: 0.75rem;
+  --text-xs--line-height: 1.4;
+  --text-sm: 0.875rem;
+  --text-sm--line-height: 1.45;
+  --text-base: 1rem;
+  --text-base--line-height: 1.55;
+  --text-lg: 1.125rem;
+  --text-lg--line-height: 1.5;
+  --text-xl: 1.3125rem;
+  --text-xl--line-height: 1.35;
+  --text-2xl: 1.5rem;
+  --text-2xl--line-height: 1.25;
+  --text-3xl: 2.25rem;
+  --text-3xl--line-height: 1.1;
+  --text-4xl: 3rem;
+  --text-4xl--line-height: 1.04;
+  --text-5xl: 3.75rem;
+  --text-5xl--line-height: 1;
+  --text-6xl: 4.5rem;
+  --text-6xl--line-height: 0.98;
+
+  --radius-control: 12px;
+  --radius-card: 18px;
+  --radius-panel: 28px;
+
+  --animate-tag-swing: tag-swing 1.4s cubic-bezier(0.3, 0.7, 0.4, 1) both;
+
+  @keyframes tag-swing {
+    0% { transform: rotate(-9deg); }
+    35% { transform: rotate(6deg); }
+    60% { transform: rotate(-3deg); }
+    80% { transform: rotate(1.5deg); }
+    100% { transform: rotate(0deg); }
+  }
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    scroll-padding-top: 5rem;
+  }
+
+  body {
+    background: var(--color-paper);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-size: 1rem;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  h1,
+  h2,
+  h3,
+  .font-display {
+    font-family: var(--font-display);
+    font-optical-sizing: auto;
+    letter-spacing: -0.015em;
+    text-wrap: balance;
+  }
+
+  h1 {
+    letter-spacing: -0.03em;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-pine);
+    outline-offset: 2px;
+  }
+
+  .night :focus-visible {
+    outline-color: var(--color-lamp);
+  }
+
+  ::selection {
+    background: var(--color-meadow);
+  }
+
+  input,
+  select,
+  textarea,
+  button {
+    font: inherit;
+  }
+
+  [hidden] {
+    display: none !important;
+  }
+}
+
+@layer components {
+  /* Form elemanları: mobilde yakınlaştırmayı önlemek için en az 16px */
+  .input {
+    display: block;
+    width: 100%;
+    min-height: 3rem;
+    border-radius: var(--radius-control);
+    border: 1px solid var(--color-line-strong);
+    background: var(--color-surface);
+    padding: 0.625rem 0.875rem;
+    font-size: 1rem;
+    color: var(--color-ink);
+    transition: border-color 120ms ease, box-shadow 120ms ease;
+  }
+  .input::placeholder {
+    color: color-mix(in srgb, var(--color-stone) 75%, transparent);
+  }
+  .input:hover {
+    border-color: color-mix(in srgb, var(--color-pine) 40%, var(--color-line-strong));
+  }
+  .input:focus {
+    outline: none;
+    border-color: var(--color-pine);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-pine) 18%, transparent);
+  }
+  .input[aria-invalid="true"] {
+    border-color: var(--color-coral);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-coral) 14%, transparent);
+  }
+  select.input {
+    appearance: none;
+    padding-right: 2.5rem;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%2356625c' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m4 6 4 4 4-4'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.875rem center;
+  }
+  textarea.input {
+    min-height: 6rem;
+    resize: vertical;
+  }
+
+  .night .input {
+    background: var(--color-night-2);
+    border-color: var(--color-night-3);
+    color: var(--color-night-ink);
+  }
+  .night .input:focus {
+    border-color: var(--color-lamp);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-lamp) 22%, transparent);
+  }
+  .night select.input {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%23aeb3dc' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m4 6 4 4 4-4'/%3E%3C/svg%3E");
+  }
+  .night .input::-webkit-calendar-picker-indicator {
+    filter: invert(0.85);
+  }
+  /* Gece temasında yardım metinleri ve "isteğe bağlı" etiketleri okunur kalsın */
+  .night [id$="-hint"],
+  .night .label .text-stone {
+    color: var(--color-night-muted);
+  }
+
+  .label {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 600;
+    margin-bottom: 0.375rem;
+  }
+
+  /* Saat seçimi: boş saat "çipleri" */
+  .slot {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2.75rem;
+    min-width: 4.5rem;
+    border-radius: 999px;
+    border: 1px solid color-mix(in srgb, var(--color-pine) 30%, transparent);
+    background: var(--color-pine-soft);
+    color: var(--color-pine-dark);
+    font-weight: 650;
+    font-variant-numeric: tabular-nums;
+    transition: background-color 120ms ease, color 120ms ease, transform 120ms ease;
+  }
+  .slot:hover {
+    background: var(--color-meadow);
+  }
+  .slot[aria-pressed="true"] {
+    background: var(--color-pine);
+    border-color: var(--color-pine);
+    color: white;
+  }
+
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
