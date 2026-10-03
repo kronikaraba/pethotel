@@ -5,7 +5,7 @@ import { count, eq, sql } from "drizzle-orm";
 import type { DB, Driver } from "./index";
 import { clinics, users } from "./schema";
 import { hashPassword } from "../auth/password";
-import { insertDemoData } from "./demo-data";
+import { DEMO_PASSWORD, insertDemoData } from "./demo-data";
 
 /** Yalnızca yerel (PGlite) veritabanında kullanılan varsayılan yönetici hesabı. */
 export const DEV_ADMIN = { email: "admin@pethotel.local", password: "pethotel123" };
@@ -17,7 +17,7 @@ export async function bootstrapData(db: DB, driver: Driver): Promise<void> {
     driver === "pglite"
       ? process.env.SEED_DEMO_DATA !== "false"
       : process.env.SEED_DEMO_DATA === "true";
-  if (wantDemo) await seedDemoDataIfEmpty(db);
+  if (wantDemo) await seedDemoDataIfEmpty(db, driver);
 }
 
 async function ensureSuperadmin(db: DB, driver: Driver) {
@@ -59,13 +59,16 @@ async function ensureSuperadmin(db: DB, driver: Driver) {
     .onConflictDoNothing();
 }
 
-/** Klinik tablosu boşsa demo verileri yükler. Aynı anda iki sunucu açılırsa kilitle sıraya girer. */
-export async function seedDemoDataIfEmpty(db: DB): Promise<boolean> {
+/**
+ * Klinik tablosu boşsa demo verileri yükler. Aynı anda iki sunucu açılırsa kilitle sıraya girer.
+ * Demo klinik hesaplarına bilinen şifre yalnızca yerel veritabanında verilir.
+ */
+export async function seedDemoDataIfEmpty(db: DB, driver: Driver): Promise<boolean> {
   return db.transaction(async (tx) => {
     await tx.execute(sql`select pg_advisory_xact_lock(727274)`);
     const [{ n }] = await tx.select({ n: count() }).from(clinics);
     if (n > 0) return false;
-    await insertDemoData(tx);
+    await insertDemoData(tx, { loginPassword: driver === "pglite" ? DEMO_PASSWORD : undefined });
     return true;
   });
 }

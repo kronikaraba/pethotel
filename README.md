@@ -33,6 +33,8 @@ Tarayıcıda <http://localhost:3000> adresini aç.
 
 Giriş sayfası: <http://localhost:3000/giris>. Demo kliniklerin hepsi sitede **Demo** etiketiyle görünür ve gerçek değildir.
 
+Canlı veritabanında (`SEED_DEMO_DATA=true`) demo klinikler sitede görünür ama **bu şifrelerle giriş yapılamaz**; demo hesaplara rastgele şifre atanır. Canlıda klinik panelini denemek için `/klinik-basvuru` sayfasından bir test kliniği ekleyip yönetim panelinden onaylayabilirsin.
+
 ### Sorun giderme
 
 - **`npm install` sonrası "vulnerabilities" uyarısı:** Aşağıdaki Güvenlik bölümündeki nota bak; yayındaki siteyi etkilemez.
@@ -51,18 +53,18 @@ Giriş sayfası: <http://localhost:3000/giris>. Demo kliniklerin hepsi sitede **
    ```
    GitHub'da boş bir depo oluştur ve verdiği `git remote add origin …` ile `git push -u origin main` komutlarını çalıştır.
 2. **Vercel'de projeyi oluştur.** Vercel → *Add New → Project* → GitHub deposunu seç → *Deploy* demeden önce 3. ve 4. adımları yap (ya da ilk deploy başarısız olursa yaptıktan sonra *Redeploy* et).
-3. **Veritabanını bağla.** Vercel projesinde *Storage → Create Database → Neon (Serverless Postgres)* → projeye bağla. `DATABASE_URL` otomatik eklenir.
+3. **Veritabanını bağla.** Vercel projesinde *Storage → Create Database → Neon (Serverless Postgres)* → projeye bağla. `DATABASE_URL` otomatik eklenir. Bölge olarak Frankfurt'u seç ve *Settings → Functions* altında fonksiyon bölgesini de Frankfurt (`fra1`) yap; sunucu ile veritabanı aynı yerde olunca sayfalar daha hızlı açılır.
 4. **Ortam değişkenlerini ekle** (*Settings → Environment Variables*):
 
    | Değişken | Açıklama |
    | --- | --- |
-   | `AUTH_SECRET` | En az 32 karakterlik rastgele anahtar. Üretmek için: `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"` |
    | `ADMIN_EMAIL` | Platform yöneticisi e-postası (ilk açılışta hesap oluşturulur) |
-   | `ADMIN_PASSWORD` | Platform yöneticisi şifresi |
-   | `NEXT_PUBLIC_SITE_URL` | Sitenin adresi, örn. `https://pethotel.vercel.app` (isteğe bağlı) |
-   | `SEED_DEMO_DATA` | Canlıda demo klinikleri görmek istersen `true` (gerçek kullanıma geçmeden kaldır) |
+   | `ADMIN_PASSWORD` | Platform yöneticisinin ilk şifresi. İlk girişten sonra `/admin/hesap` sayfasından değiştir; sonra bu değişkeni silebilirsin. |
+   | `AUTH_SECRET` | İsteğe bağlı. Oturum çerezlerini imzalayan en az 32 karakterlik anahtar. Tanımlamazsan ilk açılışta rastgele bir anahtar üretilip veritabanında saklanır. Kendin vermek istersen: `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"` |
+   | `NEXT_PUBLIC_SITE_URL` | İsteğe bağlı. Sitenin adresi, örn. `https://pethotel.com`. Tanımlamazsan Vercel'deki üretim adresi kullanılır. |
+   | `SEED_DEMO_DATA` | Canlıda demo klinikleri görmek istersen `true`. Demo hesaplarla canlıda giriş yapılamaz. Gerçek kullanıma geçmeden kaldır. |
 
-5. **Deploy.** `npm run build` önce veritabanı tablolarını oluşturur/günceller (migration), sonra siteyi derler. Bundan sonra `main` dalına her `git push` yaptığında Vercel siteyi **otomatik** yeniden yayınlar.
+5. **Deploy.** `npm run build` önce veritabanı tablolarını oluşturur/günceller (migration), sonra siteyi derler. Bundan sonra `main` dalına her `git push` yaptığında Vercel siteyi **otomatik** yeniden yayınlar. Ortam değişkenlerini ya da veritabanı bağlantısını sonradan değiştirirsen *Deployments → … → Redeploy* ile yeniden yayınla.
 
 > Başka bir sunucuda (Railway, Render, VPS…) çalıştıracaksan aynı ortam değişkenlerini tanımla; `npm run build` ve `npm start` yeterli.
 
@@ -116,7 +118,7 @@ tests/               Vitest testleri
 
 ## Güvenlik
 
-- Şifreler bcrypt ile saklanır; oturumlar `httpOnly`, `sameSite=lax` ve canlıda `secure` çerezlerde, HS256 ile imzalı JWT olarak tutulur.
+- Şifreler bcrypt ile saklanır; oturumlar `httpOnly`, `sameSite=lax` ve canlıda `secure` çerezlerde, HS256 ile imzalı JWT olarak tutulur. İmza anahtarı `AUTH_SECRET`'tan ya da (tanımlı değilse) ilk açılışta üretilip `app_settings` tablosunda saklanan rastgele anahtardan gelir.
 - Her panel sayfası ve sunucu işlemi oturumu ve kaydın o kliniğe ait olduğunu ayrıca doğrular. Personel ayarlara ve kullanıcılara erişemez.
 - Tüm form girdileri sunucuda Zod ile doğrulanır; telefonlar standart biçime çevrilir.
 - Hatalı giriş, randevu, sorgulama ve başvuru istekleri hız sınırına tabidir; formlarda bot tuzağı (honeypot) alanı vardır.
@@ -131,7 +133,7 @@ tests/               Vitest testleri
 
 - [ ] `/kvkk` sayfasındaki köşeli parantezli alanları doldur ve metni bir hukukçuya kontrol ettir.
 - [ ] `SEED_DEMO_DATA` değişkenini kaldır; demo klinikler varsa yönetim panelinden askıya al.
-- [ ] `ADMIN_PASSWORD` için güçlü bir şifre kullan.
+- [ ] `ADMIN_PASSWORD` için güçlü bir şifre kullan; ilk girişten sonra `/admin/hesap` sayfasından değiştirip değişkeni Vercel'den sil.
 
 ## Sonraki adımlar için fikirler
 

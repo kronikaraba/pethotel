@@ -12,8 +12,9 @@ const DAYS = 30;
 async function readCodes(): Promise<string[]> {
   const token = (await cookies()).get(COOKIE)?.value;
   if (!token) return [];
+  const key = await authSecret();
   try {
-    const { payload } = await jwtVerify(token, authSecret(), { algorithms: ["HS256"] });
+    const { payload } = await jwtVerify(token, key, { algorithms: ["HS256"] });
     return Array.isArray(payload.codes) ? payload.codes.filter((c): c is string => typeof c === "string") : [];
   } catch {
     return [];
@@ -32,7 +33,7 @@ export async function rememberBooking(code: string): Promise<void> {
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime(expires)
-    .sign(authSecret());
+    .sign(await authSecret());
   (await cookies()).set(COOKIE, token, {
     httpOnly: true,
     secure: secureCookies(),

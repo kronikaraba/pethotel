@@ -6,7 +6,11 @@ import "./globals.css";
 // Sayfalar veritabanından canlı veri okur; derleme sırasında önceden üretilmez.
 export const dynamic = "force-dynamic";
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+// Sitenin tam adresi: NEXT_PUBLIC_SITE_URL > Vercel'in üretim alan adı > yerel adres.
+const vercelProductionHost = process.env.VERCEL_PROJECT_PRODUCTION_URL;
+const siteUrl =
+  process.env.NEXT_PUBLIC_SITE_URL ||
+  (vercelProductionHost ? `https://${vercelProductionHost}` : "http://localhost:3000");
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),

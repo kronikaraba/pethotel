@@ -1,6 +1,7 @@
 // Demo veriler: sitenin ilk açılışta boş görünmemesi için örnek klinikler.
 // Hepsi "Demo" etiketiyle gösterilir ve gerçek klinikleri temsil etmez.
 // Canlı ortamda yalnızca SEED_DEMO_DATA=true ise yüklenir.
+import { randomBytes } from "node:crypto";
 import type { Tx } from "./index";
 import {
   appointments,
@@ -230,8 +231,14 @@ function nextOpenDays(hours: WeekHours, from: string, count: number): string[] {
   return days;
 }
 
-export async function insertDemoData(tx: Tx): Promise<void> {
-  const passwordHash = await hashPassword(DEMO_PASSWORD);
+/**
+ * Demo klinikleri, hizmetleri, veterinerleri ve örnek kayıtları ekler.
+ * Demo klinik hesapları yalnızca `loginPassword` verilirse (yerel veritabanı) bilinen şifreyle açılır.
+ * Verilmezse (canlı veritabanı) rastgele, kimsenin bilmediği bir şifre atanır: demo klinikler sitede
+ * görünür ama README'de yazan şifreyle panellerine girilemez.
+ */
+export async function insertDemoData(tx: Tx, options: { loginPassword?: string } = {}): Promise<void> {
+  const passwordHash = await hashPassword(options.loginPassword ?? randomBytes(24).toString("base64url"));
   const now = nowInIstanbul();
 
   for (const [index, c] of DEMO_CLINICS.entries()) {

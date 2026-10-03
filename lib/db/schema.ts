@@ -205,6 +205,13 @@ export const users = pgTable(
   (t) => [index("users_clinic_idx").on(t.clinicId)],
 );
 
+/** Uygulama ayarları (anahtar / değer). Örn. AUTH_SECRET tanımlı değilse üretilen oturum anahtarı. */
+export const appSettings = pgTable("app_settings", {
+  key: text("key").primaryKey(),
+  value: text("value").notNull(),
+  createdAt: createdAt(),
+});
+
 export type Clinic = typeof clinics.$inferSelect;
 export type NewClinic = typeof clinics.$inferInsert;
 export type Service = typeof services.$inferSelect;
