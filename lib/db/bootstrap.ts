@@ -1,9 +1,9 @@
 // Uygulama ilk açıldığında gerekli başlangıç verilerini hazırlar:
 // 1) Platform yöneticisi (süper admin) hesabı
 // 2) Yerel geliştirmede (veya SEED_DEMO_DATA=true ise) demo klinikler
-import { and, count, eq, ne, sql } from "drizzle-orm";
+import { and, count, eq, inArray, ne, sql } from "drizzle-orm";
 import type { DB, Driver } from "./index";
-import { clinics, users } from "./schema";
+import { boardingReservations, clinics, users } from "./schema";
 import { hashPassword } from "../auth/password";
 import { DEMO_PASSWORD, insertDemoData } from "./demo-data";
 
@@ -90,6 +90,12 @@ export async function upgradeDemoDataToKinds(db: DB, driver: Driver): Promise<bo
       .from(clinics)
       .where(and(eq(clinics.isDemo, true), ne(clinics.kind, "vet")));
     if (typed > 0) return false;
+    const demoVets = tx
+      .select({ id: clinics.id })
+      .from(clinics)
+      .where(and(eq(clinics.isDemo, true), eq(clinics.kind, "vet")));
+    // Eski örnek konaklamalar demo veterinerlerdeydi; aynı kodlarla demo otele yeniden eklenir.
+    await tx.delete(boardingReservations).where(inArray(boardingReservations.clinicId, demoVets));
     await tx
       .update(clinics)
       .set({ boardingEnabled: false })
