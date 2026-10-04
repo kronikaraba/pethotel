@@ -22,6 +22,10 @@ const nextConfig: NextConfig = {
     "/**": ["./.data/**/*", ...(usingPostgres ? ["./node_modules/@electric-sql/pglite/**/*"] : [])],
   },
   poweredByHeader: false,
+  experimental: {
+    // Klinik fotoğrafları tarayıcıda küçültülüp gönderilir (en fazla ~1,5 MB); biraz pay bırakıldı.
+    serverActions: { bodySizeLimit: "2mb" },
+  },
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },

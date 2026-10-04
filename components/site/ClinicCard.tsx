@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { BedDouble } from "lucide-react";
 import type { ClinicListItem } from "@/lib/data/public";
@@ -7,6 +8,7 @@ import { boardingPrice, boardingSpeciesOf } from "@/lib/booking/boarding";
 import { relativeDayLabel, relativeDayWord, todayInIstanbul } from "@/lib/time";
 import { ClinicCover } from "./ClinicCover";
 import { slotHref } from "./UpcomingBoard";
+import { photoUrl } from "@/lib/photos";
 
 /** Airbnb tarzı klinik kartı: kapak görseli, kısa bilgi ve doğrudan randevuya giden boş saatler. */
 export function ClinicCard({
@@ -18,7 +20,7 @@ export function ClinicCard({
   focus?: "appointment" | "boarding";
   maxSlots?: number;
 }) {
-  const { clinic, minPrice, next } = item;
+  const { clinic, minPrice, next, cover } = item;
   const status = openStatus(clinic);
   const today = todayInIstanbul();
   const species = boardingSpeciesOf(clinic);
@@ -29,12 +31,25 @@ export function ClinicCard({
   return (
     <article className="group relative">
       <div className="relative">
-        <ClinicCover
-          slug={clinic.slug}
-          name={clinic.name}
-          boarding={species.length > 0}
-          className="aspect-[4/3] w-full rounded-2xl transition-[filter] duration-200 group-hover:brightness-[0.97]"
-        />
+        {cover ? (
+          <div className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl bg-paper">
+            <Image
+              src={photoUrl(cover.id)}
+              alt=""
+              fill
+              unoptimized
+              sizes="(min-width: 1280px) 25vw, (min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+              className="object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+            />
+          </div>
+        ) : (
+          <ClinicCover
+            slug={clinic.slug}
+            name={clinic.name}
+            boarding={species.length > 0}
+            className="aspect-[4/3] w-full rounded-2xl transition-[filter] duration-200 group-hover:brightness-[0.97]"
+          />
+        )}
         <div className="absolute top-3 left-3 flex flex-wrap gap-1.5">
           {clinic.isDemo && (
             <span

@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   BedDouble,
   CalendarDays,
+  Images,
   KeyRound,
   LayoutDashboard,
   Settings,
@@ -19,6 +20,7 @@ const ITEMS = [
   { href: "/panel/konaklama", label: "Pet otel", icon: BedDouble, admin: false },
   { href: "/panel/hizmetler", label: "Hizmetler", icon: Stethoscope, admin: true },
   { href: "/panel/ekip", label: "Ekip", icon: Users, admin: true },
+  { href: "/panel/fotograflar", label: "Fotoğraflar", icon: Images, admin: true },
   { href: "/panel/kullanicilar", label: "Kullanıcılar", icon: KeyRound, admin: true },
   { href: "/panel/ayarlar", label: "Klinik ayarları", icon: Settings, admin: true },
   { href: "/panel/hesap", label: "Hesabım", icon: UserRound, admin: false },

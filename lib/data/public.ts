@@ -6,6 +6,7 @@ import { ACTIVE_APPOINTMENT_STATUSES, type ServiceCategory } from "../constants"
 import { computeSlots, type Interval } from "../booking/availability";
 import { addDays, minutesToTime, nowInIstanbul } from "../time";
 import { foldTr } from "../format";
+import { getCoverPhotos, listClinicPhotos, type PhotoMeta } from "./photos";
 
 export async function getActiveClinicBySlug(slug: string): Promise<Clinic | null> {
   const db = await getDb();
@@ -21,7 +22,7 @@ export async function getClinicPageData(slug: string) {
   const clinic = await getActiveClinicBySlug(slug);
   if (!clinic) return null;
   const db = await getDb();
-  const [serviceRows, vetRows] = await Promise.all([
+  const [serviceRows, vetRows, photos] = await Promise.all([
     db
       .select()
       .from(services)
@@ -32,8 +33,9 @@ export async function getClinicPageData(slug: string) {
       .from(vets)
       .where(and(eq(vets.clinicId, clinic.id), eq(vets.isActive, true)))
       .orderBy(asc(vets.sortOrder), asc(vets.name)),
+    listClinicPhotos(db, clinic.id),
   ]);
-  return { clinic, services: serviceRows, vets: vetRows };
+  return { clinic, services: serviceRows, vets: vetRows, photos };
 }
 
 export async function getCityStats(): Promise<{ city: string; clinics: number }[]> {
@@ -69,6 +71,8 @@ export type ClinicListItem = {
   minPrice: number | null;
   vetCount: number;
   next: NextSlot | null;
+  /** Kapak fotoğrafı; yoksa kartta renkli yer tutucu gösterilir. */
+  cover: PhotoMeta | null;
 };
 
 /** Her klinik için önümüzdeki günlerdeki ilk boş saat(ler). 3 sorguda toplu hesaplanır. */
@@ -83,7 +87,7 @@ async function enrich(
   const days = opts.days ?? 7;
   const until = addDays(now.date, days);
 
-  const [svcRows, vetRows, busyRows] = await Promise.all([
+  const [svcRows, vetRows, busyRows, covers] = await Promise.all([
     db
       .select()
       .from(services)
@@ -111,6 +115,7 @@ async function enrich(
           inArray(appointments.status, ACTIVE_APPOINTMENT_STATUSES),
         ),
       ),
+    getCoverPhotos(db, ids),
   ]);
 
   return rows.map((clinic) => {
@@ -158,6 +163,7 @@ async function enrich(
       minPrice: prices.length ? Math.min(...prices) : null,
       vetCount: clinicVets.length,
       next,
+      cover: covers.get(clinic.id) ?? null,
     };
   });
 }

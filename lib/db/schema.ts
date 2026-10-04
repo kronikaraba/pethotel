@@ -4,6 +4,7 @@ import { sql } from "drizzle-orm";
 import {
   boolean,
   check,
+  customType,
   date,
   index,
   integer,
@@ -75,6 +76,33 @@ export const clinics = pgTable(
     index("clinics_city_idx").on(t.city, t.district),
     index("clinics_status_idx").on(t.status),
   ],
+);
+
+/** İkili veri (fotoğraflar). pg Buffer, PGlite Uint8Array döndürür; ikisi de Uint8Array'dir. */
+const bytea = customType<{ data: Uint8Array; driverData: Uint8Array }>({
+  dataType: () => "bytea",
+});
+
+/**
+ * Klinik fotoğrafları. Ayrı bir dosya deposu kurmaya gerek kalmasın diye küçültülmüş hâlleri
+ * veritabanında tutulur (her biri en fazla ~1,5 MB). sortOrder'ı en küçük olan kapak fotoğrafıdır.
+ */
+export const clinicPhotos = pgTable(
+  "clinic_photos",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    clinicId: uuid("clinic_id")
+      .notNull()
+      .references(() => clinics.id, { onDelete: "cascade" }),
+    mimeType: text("mime_type").notNull(),
+    data: bytea("data").notNull(),
+    width: integer("width").notNull(),
+    height: integer("height").notNull(),
+    byteSize: integer("byte_size").notNull(),
+    sortOrder: integer("sort_order").notNull().default(0),
+    createdAt: createdAt(),
+  },
+  (t) => [index("clinic_photos_clinic_idx").on(t.clinicId, t.sortOrder)],
 );
 
 export const services = pgTable(
@@ -219,3 +247,4 @@ export type Vet = typeof vets.$inferSelect;
 export type Appointment = typeof appointments.$inferSelect;
 export type BoardingReservation = typeof boardingReservations.$inferSelect;
 export type User = typeof users.$inferSelect;
+export type ClinicPhoto = typeof clinicPhotos.$inferSelect;

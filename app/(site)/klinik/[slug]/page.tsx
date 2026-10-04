@@ -9,7 +9,7 @@ import { openStatus, weekSummary } from "@/lib/clinic-hours";
 import { boardingCapacity, boardingPrice, boardingSpeciesOf } from "@/lib/booking/boarding";
 import { buttonClass } from "@/components/ui/Button";
 import { DemoBadge } from "@/components/site/DemoBadge";
-import { ClinicCover } from "@/components/site/ClinicCover";
+import { ClinicGallery } from "@/components/site/ClinicGallery";
 
 type Params = Promise<{ slug: string }>;
 
@@ -39,7 +39,7 @@ function initials(name: string) {
 export default async function ClinicPage({ params }: { params: Params }) {
   const data = await getClinicPageData((await params).slug);
   if (!data) notFound();
-  const { clinic, services, vets } = data;
+  const { clinic, services, vets, photos } = data;
   const status = openStatus(clinic);
   const species = boardingSpeciesOf(clinic);
   const grouped = SERVICE_CATEGORIES.map((c) => ({ category: c, items: services.filter((s) => s.category === c) })).filter(
@@ -103,13 +103,7 @@ export default async function ClinicPage({ params }: { params: Params }) {
         </div>
       </header>
 
-      <ClinicCover
-        slug={clinic.slug}
-        name={clinic.name}
-        boarding={species.length > 0}
-        size="hero"
-        className="mt-6 aspect-[4/3] w-full rounded-3xl sm:aspect-[2.6/1]"
-      />
+      <ClinicGallery photos={photos} slug={clinic.slug} name={clinic.name} boarding={species.length > 0} />
 
       <div className="mt-10 grid grid-cols-1 gap-12 lg:grid-cols-[minmax(0,1fr)_370px] lg:gap-16">
         <div className="min-w-0 space-y-14">
