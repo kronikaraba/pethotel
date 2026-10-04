@@ -38,7 +38,7 @@ export function MobileMenu({
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         aria-controls="mobil-menu"
-        className="inline-flex h-11 w-11 items-center justify-center rounded-control border border-line-strong bg-surface"
+        className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-line-strong bg-surface shadow-[0_1px_2px_rgba(0,0,0,0.08)]"
       >
         {open ? <X className="h-5 w-5" aria-hidden /> : <Menu className="h-5 w-5" aria-hidden />}
         <span className="sr-only">{open ? "Menüyü kapat" : "Menüyü aç"}</span>
@@ -46,7 +46,7 @@ export function MobileMenu({
       {open && (
         <div
           id="mobil-menu"
-          className="absolute inset-x-0 top-16 border-b border-line bg-paper px-4 pt-2 pb-5 shadow-[0_18px_30px_-20px_rgba(22,35,30,0.35)]"
+          className="absolute inset-x-0 top-20 border-b border-line bg-surface px-4 pt-2 pb-5 shadow-[0_18px_30px_-20px_rgba(22,35,30,0.35)]"
         >
           <nav aria-label="Mobil menü" className="flex flex-col">
             {links.map((l) => (
@@ -61,7 +61,7 @@ export function MobileMenu({
           <Link
             href={panelHref}
             onClick={() => setOpen(false)}
-            className="mt-4 flex min-h-12 items-center justify-center rounded-control bg-pine font-semibold text-white"
+            className="mt-4 flex min-h-12 items-center justify-center rounded-xl bg-pine font-semibold text-white"
           >
             {panelLabel}
           </Link>

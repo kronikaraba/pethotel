@@ -26,7 +26,7 @@ const groups = [
 export function SiteFooter() {
   return (
     <footer className="night mt-24 bg-night text-night-ink">
-      <div className="mx-auto grid grid-cols-1 max-w-6xl gap-10 px-4 py-14 sm:px-6 md:grid-cols-[1.3fr_2fr]">
+      <div className="mx-auto grid grid-cols-1 max-w-7xl gap-10 px-4 py-14 sm:px-6 lg:px-10 md:grid-cols-[1.3fr_2fr]">
         <div className="max-w-sm">
           <Logo tone="lamp" />
           <p className="mt-4 text-night-muted">
@@ -51,7 +51,7 @@ export function SiteFooter() {
         </div>
       </div>
       <div className="border-t border-night-3/60">
-        <p className="mx-auto max-w-6xl px-4 py-5 text-sm text-night-muted sm:px-6">
+        <p className="mx-auto max-w-7xl px-4 py-5 text-sm text-night-muted sm:px-6 lg:px-10">
           © {new Date().getFullYear()} PetHotel. Acil durumlarda en yakın veteriner kliniğini doğrudan ara.
         </p>
       </div>

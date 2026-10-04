@@ -9,6 +9,7 @@ import { openStatus, weekSummary } from "@/lib/clinic-hours";
 import { boardingCapacity, boardingPrice, boardingSpeciesOf } from "@/lib/booking/boarding";
 import { buttonClass } from "@/components/ui/Button";
 import { DemoBadge } from "@/components/site/DemoBadge";
+import { ClinicCover } from "@/components/site/ClinicCover";
 
 type Params = Promise<{ slug: string }>;
 
@@ -47,6 +48,8 @@ export default async function ClinicPage({ params }: { params: Params }) {
   const canBook = services.length > 0 && vets.length > 0;
   const bookHref = `/klinik/${clinic.slug}/randevu`;
   const boardHref = `/klinik/${clinic.slug}/konaklama`;
+  const prices = services.map((s) => s.price).filter((p): p is number => p !== null);
+  const minPrice = prices.length ? Math.min(...prices) : null;
 
   return (
     <div className="mx-auto max-w-6xl px-4 pt-6 sm:px-6">
@@ -75,13 +78,13 @@ export default async function ClinicPage({ params }: { params: Params }) {
       </nav>
 
       {/* Başlık */}
-      <header className="mt-6 grid grid-cols-1 gap-6 border-b border-line pb-8 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
+      <header className="mt-5">
         <div>
           <div className="flex flex-wrap items-center gap-3">
-            <h1 className="text-[2.25rem] leading-[1.05] font-bold sm:text-5xl">{clinic.name}</h1>
+            <h1 className="text-[1.875rem] leading-[1.1] font-bold sm:text-4xl">{clinic.name}</h1>
             {clinic.isDemo && <DemoBadge />}
           </div>
-          <ul className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-stone">
+          <ul className="mt-3 flex flex-wrap gap-x-6 gap-y-2 text-stone">
             <li className="inline-flex items-center gap-2">
               <MapPin className="h-4 w-4" aria-hidden />
               {clinic.district}, {clinic.city}
@@ -98,21 +101,17 @@ export default async function ClinicPage({ params }: { params: Params }) {
             </li>
           </ul>
         </div>
-        <div className="hidden gap-3 md:flex">
-          {canBook && (
-            <Link href={bookHref} className={buttonClass("primary", "lg")}>
-              Randevu al
-            </Link>
-          )}
-          {species.length > 0 && (
-            <Link href={boardHref} className={buttonClass("night", "lg")}>
-              Konaklama iste
-            </Link>
-          )}
-        </div>
       </header>
 
-      <div className="mt-10 grid grid-cols-1 gap-12 lg:grid-cols-[minmax(0,1fr)_340px]">
+      <ClinicCover
+        slug={clinic.slug}
+        name={clinic.name}
+        boarding={species.length > 0}
+        size="hero"
+        className="mt-6 aspect-[4/3] w-full rounded-3xl sm:aspect-[2.6/1]"
+      />
+
+      <div className="mt-10 grid grid-cols-1 gap-12 lg:grid-cols-[minmax(0,1fr)_370px] lg:gap-16">
         <div className="min-w-0 space-y-14">
           {clinic.description && (
             <section aria-labelledby="hakkinda">
@@ -197,7 +196,7 @@ export default async function ClinicPage({ params }: { params: Params }) {
 
           {/* Pet otel */}
           {species.length > 0 && (
-            <section aria-labelledby="pet-otel" className="night rounded-panel bg-night p-7 text-night-ink sm:p-9">
+            <section aria-labelledby="pet-otel" className="night rounded-3xl bg-night p-7 text-night-ink sm:p-9">
               <h2 id="pet-otel" className="flex items-center gap-3 text-2xl font-bold sm:text-3xl">
                 Pet otel
                 <Moon className="h-6 w-6 text-lamp" aria-hidden />
@@ -229,8 +228,43 @@ export default async function ClinicPage({ params }: { params: Params }) {
         </div>
 
         {/* Yan bilgi */}
-        <aside className="space-y-8 lg:sticky lg:top-24 lg:self-start">
-          <section aria-labelledby="saatler" className="rounded-panel border border-line bg-surface p-6">
+        <aside className="space-y-6 lg:sticky lg:top-28 lg:self-start">
+          {(canBook || species.length > 0) && (
+            <section
+              aria-label="Randevu ve konaklama"
+              className="hidden rounded-2xl border border-line bg-surface p-6 shadow-[0_6px_16px_rgba(0,0,0,0.12)] md:block"
+            >
+              <p className="text-lg">
+                {minPrice !== null ? (
+                  <>
+                    <span className="text-2xl font-semibold tabular">{formatPrice(minPrice)}</span>
+                    <span className="text-stone">&apos;den başlayan hizmetler</span>
+                  </>
+                ) : (
+                  <span className="font-semibold">Fiyatlar klinikte</span>
+                )}
+              </p>
+              <p className={`mt-1 inline-flex items-center gap-2 text-sm ${status.open ? "font-medium text-pine" : "text-stone"}`}>
+                <Clock className="h-4 w-4" aria-hidden />
+                {status.label}
+              </p>
+              <div className="mt-5 flex flex-col gap-3">
+                {canBook && (
+                  <Link href={bookHref} className={buttonClass("primary", "lg", "w-full rounded-xl")}>
+                    Randevu al
+                  </Link>
+                )}
+                {species.length > 0 && (
+                  <Link href={boardHref} className={buttonClass("night", "lg", "w-full rounded-xl")}>
+                    Konaklama iste
+                  </Link>
+                )}
+              </div>
+              <p className="mt-4 text-center text-sm text-stone">Randevu ücretsizdir, ödemeyi klinikte yaparsın.</p>
+            </section>
+          )}
+
+          <section aria-labelledby="saatler" className="rounded-2xl border border-line bg-surface p-6">
             <h2 id="saatler" className="text-xl font-semibold">
               Çalışma saatleri
             </h2>
@@ -251,7 +285,7 @@ export default async function ClinicPage({ params }: { params: Params }) {
             </p>
           </section>
 
-          <section aria-labelledby="iletisim" className="rounded-panel border border-line bg-surface p-6">
+          <section aria-labelledby="iletisim" className="rounded-2xl border border-line bg-surface p-6">
             <h2 id="iletisim" className="text-xl font-semibold">
               İletişim ve adres
             </h2>
@@ -287,7 +321,13 @@ export default async function ClinicPage({ params }: { params: Params }) {
 
       {/* Mobilde sabit randevu çubuğu */}
       {(canBook || species.length > 0) && (
-        <div className="sticky bottom-0 z-30 -mx-4 mt-10 border-t border-line bg-paper/95 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6 md:hidden">
+        <div className="sticky bottom-0 z-30 -mx-4 mt-10 border-t border-line bg-surface/95 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6 md:hidden">
+          {minPrice !== null && (
+            <p className="mb-2 text-sm">
+              <span className="font-semibold tabular">{formatPrice(minPrice)}</span>
+              <span className="text-stone">&apos;den başlayan hizmetler</span>
+            </p>
+          )}
           <div className="flex gap-3">
             {canBook && (
               <Link href={bookHref} className={buttonClass("primary", "lg", "flex-1")}>

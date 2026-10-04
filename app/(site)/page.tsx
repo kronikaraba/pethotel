@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { BedDouble, CalendarCheck, Moon, ShieldCheck, Stethoscope, Syringe, Scissors, Microscope, HeartPulse } from "lucide-react";
 import { SearchForm } from "@/components/site/SearchForm";
-import { UpcomingBoard } from "@/components/site/UpcomingBoard";
+import { ClinicCard } from "@/components/site/ClinicCard";
+import { CategoryStrip } from "@/components/site/CategoryStrip";
 import { ButtonLink } from "@/components/ui/Button";
 import { getCityStats, getUpcomingSlots } from "@/lib/data/public";
 
@@ -37,25 +38,24 @@ const DAY_SERVICES = [
 ];
 
 export default async function HomePage() {
-  const [upcoming, cityStats] = await Promise.all([getUpcomingSlots({ limit: 4 }), getCityStats()]);
+  const [upcoming, cityStats] = await Promise.all([getUpcomingSlots({ limit: 8 }), getCityStats()]);
   const popularCities = cityStats.map((c) => c.city);
 
   return (
     <>
-      {/* Giriş: arama + canlı boş saatler */}
-      <section className="mx-auto grid grid-cols-1 max-w-6xl gap-10 px-4 pt-10 pb-16 sm:px-6 md:pt-16 lg:grid-cols-12 lg:gap-12 lg:pb-24">
-        <div className="lg:col-span-7">
-          <h1 className="max-w-[16ch] text-[2.5rem] leading-[1.02] font-bold sm:text-5xl lg:text-6xl">
+      {/* Giriş: Airbnb tarzı arama çubuğu */}
+      <section className="border-b border-line">
+        <div className="mx-auto max-w-7xl px-4 pt-8 pb-8 sm:px-6 md:pt-12 lg:px-10">
+          <h1 className="mx-auto max-w-[22ch] text-center text-[2.25rem] leading-[1.05] font-bold sm:text-5xl">
             Veteriner randevusu ve pet otel, tek yerde.
           </h1>
-          <p className="mt-5 max-w-[52ch] text-lg text-stone">
-            Şehrindeki klinikleri karşılaştır, boş saatleri gör ve üye olmadan randevunu al. Tatile çıkarken dostun
-            veteriner gözetiminde konaklasın.
+          <p className="mx-auto mt-4 max-w-[52ch] text-center text-lg text-stone">
+            Şehrindeki klinikleri karşılaştır, boş saatleri gör ve üye olmadan randevunu al.
           </p>
-          <div className="mt-8 max-w-xl">
+          <div className="mx-auto mt-8 max-w-3xl">
             <SearchForm popularCities={popularCities} />
           </div>
-          <ul className="mt-6 flex flex-wrap gap-x-6 gap-y-2 text-sm text-stone">
+          <ul className="mt-6 flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-stone">
             <li className="flex items-center gap-2">
               <ShieldCheck className="h-4 w-4 text-pine" aria-hidden /> Üyelik gerekmez
             </li>
@@ -63,15 +63,50 @@ export default async function HomePage() {
               <CalendarCheck className="h-4 w-4 text-pine" aria-hidden /> Randevunu kodunla yönet
             </li>
           </ul>
-        </div>
-        <div className="lg:col-span-5 lg:pt-3">
-          <UpcomingBoard items={upcoming} />
+          <div className="mt-10">
+            <CategoryStrip hrefFor={(c) => (c ? `/klinikler?hizmet=${c}` : "/klinikler")} />
+          </div>
         </div>
       </section>
 
+      {/* En yakın boş saatler: klinik kartları */}
+      <section aria-labelledby="bos-saatler" className="mx-auto max-w-7xl px-4 pt-10 sm:px-6 lg:px-10">
+        <div className="flex items-end justify-between gap-4">
+          <div>
+            <h2 id="bos-saatler" className="flex items-center gap-2.5 text-2xl font-bold">
+              En yakın boş saatler
+              <span className="relative flex h-2 w-2" aria-hidden>
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-pine/50 motion-reduce:hidden" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-pine" />
+              </span>
+            </h2>
+            <p className="mt-1 text-stone">Saate dokun, doğrudan randevu adımına geç.</p>
+          </div>
+          <Link href="/klinikler" className="hidden shrink-0 font-semibold underline underline-offset-4 hover:text-pine sm:inline">
+            Tüm klinikler
+          </Link>
+        </div>
+        {upcoming.length === 0 ? (
+          <p className="mt-6 text-stone">
+            Şu an gösterilecek boş saat yok.{" "}
+            <Link href="/klinikler" className="font-semibold text-pine underline-offset-4 hover:underline">
+              Tüm klinikleri gör
+            </Link>
+          </p>
+        ) : (
+          <ul className="mt-6 grid grid-cols-1 gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-4">
+            {upcoming.map((item) => (
+              <li key={item.clinic.id}>
+                <ClinicCard item={item} maxSlots={4} />
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
       {/* Gündüz / gece: iki hizmet */}
-      <section aria-label="Hizmetler" className="mx-auto max-w-6xl px-4 sm:px-6">
-        <div className="grid grid-cols-1 overflow-hidden rounded-panel border border-line md:grid-cols-2">
+      <section aria-label="Hizmetler" className="mx-auto max-w-7xl px-4 pt-20 sm:px-6 lg:px-10">
+        <div className="grid grid-cols-1 overflow-hidden rounded-3xl border border-line shadow-[0_6px_24px_-12px_rgba(0,0,0,0.18)] md:grid-cols-2">
           <div className="bg-surface p-7 sm:p-10">
             <h2 className="text-3xl font-bold">Veteriner randevusu</h2>
             <p className="mt-3 max-w-[44ch] text-stone">
@@ -130,7 +165,7 @@ export default async function HomePage() {
       </section>
 
       {/* Nasıl çalışır: gerçek bir sıra olduğu için numaralı */}
-      <section aria-labelledby="nasil" className="mx-auto max-w-6xl px-4 pt-24 sm:px-6">
+      <section aria-labelledby="nasil" className="mx-auto max-w-7xl px-4 pt-24 sm:px-6 lg:px-10">
         <h2 id="nasil" className="text-3xl font-bold">
           Üç adımda randevu
         </h2>
@@ -151,7 +186,7 @@ export default async function HomePage() {
 
       {/* Şehirler */}
       {cityStats.length > 0 && (
-        <section aria-labelledby="sehirler" className="mx-auto max-w-6xl px-4 pt-24 sm:px-6">
+        <section aria-labelledby="sehirler" className="mx-auto max-w-7xl px-4 pt-24 sm:px-6 lg:px-10">
           <h2 id="sehirler" className="text-3xl font-bold">
             Şehirlere göre klinikler
           </h2>
@@ -160,7 +195,7 @@ export default async function HomePage() {
               <li key={c.city}>
                 <Link
                   href={`/klinikler?sehir=${encodeURIComponent(c.city)}`}
-                  className="inline-flex items-center gap-3 rounded-full border border-line-strong bg-surface py-2 pr-2 pl-5 text-lg font-semibold hover:border-pine hover:text-pine"
+                  className="inline-flex items-center gap-3 rounded-full border border-line-strong bg-surface py-2 pr-2 pl-5 text-lg font-semibold transition-shadow hover:shadow-[0_2px_8px_rgba(0,0,0,0.14)]"
                 >
                   {c.city}
                   <span className="rounded-full bg-pine-soft px-3 py-1 text-sm text-pine tabular">{c.clinics} klinik</span>
@@ -172,8 +207,8 @@ export default async function HomePage() {
       )}
 
       {/* Klinikler için */}
-      <section aria-labelledby="klinikler-icin" className="mx-auto max-w-6xl px-4 pt-24 sm:px-6">
-        <div className="grid grid-cols-1 gap-8 rounded-panel bg-pine p-8 text-white sm:p-12 md:grid-cols-[1.4fr_minmax(0,1fr)] md:items-end">
+      <section aria-labelledby="klinikler-icin" className="mx-auto max-w-7xl px-4 pt-24 sm:px-6 lg:px-10">
+        <div className="grid grid-cols-1 gap-8 rounded-3xl bg-pine p-8 text-white sm:p-12 md:grid-cols-[1.4fr_minmax(0,1fr)] md:items-end">
           <div>
             <h2 id="klinikler-icin" className="text-3xl font-bold sm:text-4xl">
               Kliniğin PetHotel&apos;de olsun
@@ -195,7 +230,7 @@ export default async function HomePage() {
       </section>
 
       {/* SSS */}
-      <section aria-labelledby="sss" className="mx-auto max-w-6xl px-4 pt-24 sm:px-6">
+      <section aria-labelledby="sss" className="mx-auto max-w-7xl px-4 pt-24 sm:px-6 lg:px-10">
         <h2 id="sss" className="text-3xl font-bold">
           Sık sorulanlar
         </h2>
