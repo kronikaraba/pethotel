@@ -29,6 +29,23 @@ export const DEFAULT_HOURS: WeekHours = {
   "0": null,
 };
 
+/** Pet sitterın başlangıç çalışma saatleri: hafta sonu da açık. */
+export const DEFAULT_SITTER_HOURS: WeekHours = {
+  "1": { open: "08:00", close: "20:00", breakStart: null, breakEnd: null },
+  "2": { open: "08:00", close: "20:00", breakStart: null, breakEnd: null },
+  "3": { open: "08:00", close: "20:00", breakStart: null, breakEnd: null },
+  "4": { open: "08:00", close: "20:00", breakStart: null, breakEnd: null },
+  "5": { open: "08:00", close: "20:00", breakStart: null, breakEnd: null },
+  "6": { open: "09:00", close: "18:00", breakStart: null, breakEnd: null },
+  "0": { open: "09:00", close: "18:00", breakStart: null, breakEnd: null },
+};
+
+/** Yeni pet sittera önerilen başlangıç hizmetleri (fiyatsız; panelden düzenlenir). */
+export const STARTER_SITTER_SERVICES: { name: string; category: ServiceCategory; durationMinutes: number }[] = [
+  { name: "Ev ziyareti (45 dk)", category: "ziyaret", durationMinutes: 45 },
+  { name: "Köpek gezdirme (1 saat)", category: "gezdirme", durationMinutes: 60 },
+];
+
 /** Yeni kliniğe önerilen başlangıç hizmetleri (fiyatsız; klinik düzenler). */
 export const STARTER_SERVICES: { name: string; category: ServiceCategory; durationMinutes: number }[] = [
   { name: "Genel muayene", category: "muayene", durationMinutes: 30 },

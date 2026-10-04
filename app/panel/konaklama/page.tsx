@@ -13,7 +13,7 @@ import { buttonClass } from "@/components/ui/Button";
 export const metadata = { title: "Pet otel" };
 
 export default async function BoardingPanelPage() {
-  const { clinic, isAdmin } = await requireClinicUser();
+  const { clinic, isAdmin } = await requireClinicUser({ kinds: ["hotel"] });
   const today = todayInIstanbul();
 
   if (!clinic.boardingEnabled) {

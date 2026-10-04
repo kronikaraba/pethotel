@@ -8,7 +8,7 @@ export const metadata = { title: "Kullanıcılar" };
 const fmt = new Intl.DateTimeFormat("tr-TR", { timeZone: "Europe/Istanbul", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 
 export default async function UsersPage() {
-  const { clinic, user } = await requireClinicUser({ adminOnly: true });
+  const { clinic, user } = await requireClinicUser({ adminOnly: true, kinds: ["vet", "hotel"] });
   const list = await getClinicUsers(clinic.id);
   return (
     <>

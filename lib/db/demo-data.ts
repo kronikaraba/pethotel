@@ -12,7 +12,7 @@ import {
   vets,
   type WeekHours,
 } from "./schema";
-import type { ServiceCategory } from "../constants";
+import type { BusinessKind, ServiceCategory } from "../constants";
 import { hashPassword } from "../auth/password";
 import { addDays, nowInIstanbul, timeToMinutes, weekdayOf } from "../time";
 
@@ -31,13 +31,12 @@ const BASE_SERVICES: DemoService[] = [
   { name: "Ultrason", category: "goruntuleme", duration: 30, price: 1800 },
   { name: "Mikroçip uygulaması", category: "diger", duration: 15, price: 600 },
   { name: "Tıraş ve bakım", category: "bakim", duration: 60, price: 1500, description: "Banyo, tüy kesimi, tırnak ve kulak bakımı." },
-  {
-    name: "Evde bakım ziyareti",
-    category: "petsitter",
-    duration: 60,
-    price: 750,
-    description: "Klinik ekibinden bir bakıcı evine gelir: mama, su, kum kabı, ilaç, oyun ve kısa yürüyüş.",
-  },
+];
+
+const SITTER_SERVICES: DemoService[] = [
+  { name: "Ev ziyareti (45 dk)", category: "ziyaret", duration: 45, price: 550, description: "Mama ve su, kum kabı temizliği, ilaç, oyun. Ziyaret sonunda fotoğraflı bilgi." },
+  { name: "Uzun ev ziyareti (2 saat)", category: "ziyaret", duration: 120, price: 1100, description: "Yalnız kalmayı sevmeyen dostlar için uzun ziyaret: oyun, bakım ve dinlenme." },
+  { name: "Köpek gezdirme (1 saat)", category: "gezdirme", duration: 60, price: 450, description: "Mahallede tasmalı yürüyüş; dönüşte pati temizliği ve su." },
 ];
 
 const weekdays = (open: string, close: string, extra?: Partial<WeekHours>, breakStart?: string, breakEnd?: string): WeekHours => {
@@ -46,6 +45,7 @@ const weekdays = (open: string, close: string, extra?: Partial<WeekHours>, break
 };
 
 type DemoClinic = {
+  kind: BusinessKind;
   slug: string;
   name: string;
   city: string;
@@ -58,7 +58,9 @@ type DemoClinic = {
   hours: WeekHours;
   slotMinutes?: number;
   boarding?: { cat: number; dog: number; catPrice?: number; dogPrice?: number; notes: string };
+  /** Veterinerler; pet sitter için kendisi (randevu takvimi bu kayıt üzerinden işler). */
   vets: { name: string; title: string; bio?: string }[];
+  services?: DemoService[];
   serviceNames?: string[];
   priceFactor?: number;
   admin: { email: string; name: string };
@@ -67,6 +69,7 @@ type DemoClinic = {
 
 const DEMO_CLINICS: DemoClinic[] = [
   {
+    kind: "vet",
     slug: "moda-pati-veteriner",
     name: "Moda Pati Veteriner Kliniği",
     city: "İstanbul",
@@ -75,15 +78,8 @@ const DEMO_CLINICS: DemoClinic[] = [
     phone: "+902160000001",
     email: "moda@pethotel.local",
     description:
-      "Kedi ve köpekler için koruyucu hekimlik, aşı takibi ve kısa süreli konaklama. Bu bir demo kliniktir; bilgiler örnek amaçlıdır.",
+      "Kedi ve köpekler için koruyucu hekimlik ve aşı takibi. Bu bir demo kliniktir; bilgiler örnek amaçlıdır.",
     hours: weekdays("09:00", "19:00", { "6": { open: "10:00", close: "17:00", breakStart: null, breakEnd: null } }, "13:00", "14:00"),
-    boarding: {
-      cat: 8,
-      dog: 4,
-      catPrice: 650,
-      dogPrice: 950,
-      notes: "Giriş 10:00–18:00, çıkış 12:00'ye kadar. Karma ve kuduz aşıları güncel olmalı. Kendi mamanızı getirebilirsiniz.",
-    },
     vets: [
       { name: "Elif Arslan", title: "Veteriner Hekim", bio: "Kedi hastalıkları ve koruyucu hekimlik." },
       { name: "Kerem Yıldız", title: "Uzm. Veteriner Hekim", bio: "İç hastalıkları ve ultrason." },
@@ -92,6 +88,7 @@ const DEMO_CLINICS: DemoClinic[] = [
     staff: { email: "resepsiyon@pethotel.local", name: "Moda Pati Resepsiyon" },
   },
   {
+    kind: "vet",
     slug: "levent-dostlar-hayvan-hastanesi",
     name: "Levent Dostlar Hayvan Hastanesi",
     city: "İstanbul",
@@ -111,13 +108,6 @@ const DEMO_CLINICS: DemoClinic[] = [
       "6": { open: "09:00", close: "21:00" },
     },
     slotMinutes: 15,
-    boarding: {
-      cat: 6,
-      dog: 6,
-      catPrice: 750,
-      dogPrice: 1100,
-      notes: "Bahçeli köpek odaları, kediler için ayrı ve sessiz bölüm. Giriş öncesi kısa sağlık kontrolü yapılır.",
-    },
     vets: [
       { name: "Zeynep Aydın", title: "Doç. Dr. Veteriner Hekim", bio: "Cerrahi ve ortopedi." },
       { name: "Burak Demir", title: "Veteriner Hekim", bio: "Acil ve yoğun bakım." },
@@ -127,6 +117,7 @@ const DEMO_CLINICS: DemoClinic[] = [
     admin: { email: "levent@pethotel.local", name: "Levent Dostlar Yönetici" },
   },
   {
+    kind: "vet",
     slug: "atasehir-mirmir-veteriner",
     name: "Ataşehir Mırmır Veteriner",
     city: "İstanbul",
@@ -142,6 +133,7 @@ const DEMO_CLINICS: DemoClinic[] = [
     admin: { email: "atasehir@pethotel.local", name: "Ataşehir Mırmır Yönetici" },
   },
   {
+    kind: "vet",
     slug: "cankaya-can-dost-veteriner",
     name: "Çankaya Can Dost Veteriner Kliniği",
     city: "Ankara",
@@ -151,13 +143,6 @@ const DEMO_CLINICS: DemoClinic[] = [
     email: "cankaya@pethotel.local",
     description: "Aile kliniği; aşı takvimi hatırlatma ve yaşlı hayvan bakımı. Bu bir demo kliniktir; bilgiler örnek amaçlıdır.",
     hours: weekdays("09:00", "18:30", { "6": { open: "09:00", close: "14:00" } }, "12:30", "13:30"),
-    boarding: {
-      cat: 5,
-      dog: 3,
-      catPrice: 550,
-      dogPrice: 800,
-      notes: "Günde iki kez oyun ve fotoğraflı durum bildirimi. Giriş ve çıkış mesai saatleri içinde yapılır.",
-    },
     vets: [
       { name: "Deniz Kaya", title: "Veteriner Hekim" },
       { name: "Ece Çelik", title: "Veteriner Hekim", bio: "Diş sağlığı." },
@@ -166,6 +151,7 @@ const DEMO_CLINICS: DemoClinic[] = [
     admin: { email: "cankaya@pethotel.local", name: "Can Dost Yönetici" },
   },
   {
+    kind: "vet",
     slug: "karsiyaka-sahil-veteriner",
     name: "Karşıyaka Sahil Veteriner",
     city: "İzmir",
@@ -188,6 +174,7 @@ const DEMO_CLINICS: DemoClinic[] = [
     admin: { email: "karsiyaka@pethotel.local", name: "Sahil Veteriner Yönetici" },
   },
   {
+    kind: "vet",
     slug: "nilufer-patiler-veteriner",
     name: "Nilüfer Patiler Veteriner Polikliniği",
     city: "Bursa",
@@ -195,14 +182,8 @@ const DEMO_CLINICS: DemoClinic[] = [
     address: "Görükle Mah. Demo Cad. No: 15, Nilüfer/Bursa",
     phone: "+902240000006",
     email: "nilufer@pethotel.local",
-    description: "Köpek oteli ve eğitim desteği; geniş bahçe. Bu bir demo kliniktir; bilgiler örnek amaçlıdır.",
+    description: "Aşı takibi, davranış danışmanlığı ve yavru bakımı. Bu bir demo kliniktir; bilgiler örnek amaçlıdır.",
     hours: weekdays("09:30", "18:30", { "6": { open: "09:30", close: "18:30" } }),
-    boarding: {
-      cat: 0,
-      dog: 10,
-      dogPrice: 700,
-      notes: "Yalnızca köpek konaklaması. Günde üç yürüyüş, bahçede serbest oyun saatleri.",
-    },
     vets: [
       { name: "Naz Erdem", title: "Veteriner Hekim" },
       { name: "Can Aksoy", title: "Veteriner Hekim", bio: "Davranış ve eğitim." },
@@ -211,6 +192,7 @@ const DEMO_CLINICS: DemoClinic[] = [
     admin: { email: "nilufer@pethotel.local", name: "Patiler Yönetici" },
   },
   {
+    kind: "vet",
     slug: "bornova-minik-pati",
     name: "Bornova Minik Pati Kliniği",
     city: "İzmir",
@@ -223,6 +205,141 @@ const DEMO_CLINICS: DemoClinic[] = [
     hours: weekdays("09:00", "18:00"),
     vets: [{ name: "Ayla Tunç", title: "Veteriner Hekim" }],
     admin: { email: "bornova@pethotel.local", name: "Minik Pati Yönetici" },
+  },
+  // ---------- Pet oteller ----------
+  {
+    kind: "hotel",
+    slug: "kadikoy-patili-pet-otel",
+    name: "Kadıköy Patili Pet Otel",
+    city: "İstanbul",
+    district: "Kadıköy",
+    address: "Fenerbahçe Mah. Demo Sok. No: 5, Kadıköy/İstanbul",
+    phone: "+902160000011",
+    email: "otel@pethotel.local",
+    description: "Kediler için sessiz odalar, köpekler için bahçeli bölüm. Günlük fotoğraflı bilgi. Bu bir demo oteldir; bilgiler örnek amaçlıdır.",
+    hours: weekdays("09:00", "19:00", { "6": { open: "10:00", close: "17:00" }, "0": { open: "10:00", close: "17:00" } }),
+    boarding: {
+      cat: 8,
+      dog: 4,
+      catPrice: 650,
+      dogPrice: 950,
+      notes: "Giriş 10:00–18:00, çıkış 12:00'ye kadar. Karma ve kuduz aşıları güncel olmalı. Kendi mamanızı getirebilirsiniz.",
+    },
+    vets: [],
+    admin: { email: "otel@pethotel.local", name: "Patili Otel Yönetici" },
+    staff: { email: "otel-resepsiyon@pethotel.local", name: "Patili Otel Resepsiyon" },
+  },
+  {
+    kind: "hotel",
+    slug: "sariyer-bahceli-pet-otel",
+    name: "Sarıyer Bahçeli Pet Otel",
+    city: "İstanbul",
+    district: "Sarıyer",
+    address: "Zekeriyaköy Mah. Demo Cad. No: 30, Sarıyer/İstanbul",
+    phone: "+902120000012",
+    email: "sariyer-otel@pethotel.local",
+    description: "Geniş bahçe, köpekler için günde üç oyun saati ve kedi süitleri. Bu bir demo oteldir; bilgiler örnek amaçlıdır.",
+    hours: weekdays("08:00", "20:00", { "6": { open: "09:00", close: "18:00" }, "0": { open: "09:00", close: "18:00" } }),
+    boarding: {
+      cat: 6,
+      dog: 10,
+      catPrice: 750,
+      dogPrice: 1100,
+      notes: "Bahçeli köpek odaları, kediler için ayrı ve sessiz bölüm. Girişte aşı karnesi kontrol edilir.",
+    },
+    vets: [],
+    admin: { email: "sariyer-otel@pethotel.local", name: "Bahçeli Otel Yönetici" },
+  },
+  {
+    kind: "hotel",
+    slug: "cankaya-mirmir-kedi-oteli",
+    name: "Çankaya Mırmır Kedi Oteli",
+    city: "Ankara",
+    district: "Çankaya",
+    address: "Ayrancı Mah. Demo Sok. No: 14, Çankaya/Ankara",
+    phone: "+903120000013",
+    email: "ankara-otel@pethotel.local",
+    description: "Yalnızca kedilere hizmet veren sakin otel; her misafire ayrı oda. Bu bir demo oteldir; bilgiler örnek amaçlıdır.",
+    hours: weekdays("09:00", "18:30", { "6": { open: "10:00", close: "16:00" } }),
+    boarding: {
+      cat: 12,
+      dog: 0,
+      catPrice: 550,
+      notes: "Günde iki kez oyun ve fotoğraflı durum bildirimi. Giriş ve çıkış çalışma saatleri içinde yapılır.",
+    },
+    vets: [],
+    admin: { email: "ankara-otel@pethotel.local", name: "Mırmır Otel Yönetici" },
+  },
+  {
+    kind: "hotel",
+    slug: "nilufer-patiler-kopek-oteli",
+    name: "Nilüfer Patiler Köpek Oteli",
+    city: "Bursa",
+    district: "Nilüfer",
+    address: "Görükle Mah. Demo Cad. No: 22, Nilüfer/Bursa",
+    phone: "+902240000014",
+    email: "bursa-otel@pethotel.local",
+    description: "Köpek oteli ve eğitim desteği; geniş bahçe. Bu bir demo oteldir; bilgiler örnek amaçlıdır.",
+    hours: weekdays("09:30", "18:30", { "6": { open: "09:30", close: "18:30" } }),
+    boarding: {
+      cat: 0,
+      dog: 10,
+      dogPrice: 700,
+      notes: "Yalnızca köpek konaklaması. Günde üç yürüyüş, bahçede serbest oyun saatleri.",
+    },
+    vets: [],
+    admin: { email: "bursa-otel@pethotel.local", name: "Patiler Otel Yönetici" },
+  },
+  // ---------- Pet sitterlar ----------
+  {
+    kind: "sitter",
+    slug: "deniz-yalcin-pet-sitter",
+    name: "Deniz Yalçın",
+    city: "İstanbul",
+    district: "Kadıköy",
+    address: "Kadıköy, Ataşehir ve Üsküdar",
+    phone: "+905000000031",
+    email: "sitter@pethotel.local",
+    description:
+      "6 yıldır kedi ve köpek bakıyorum. İlaç verebilirim, yaşlı ve özel bakım gerektiren dostlara alışkınım. Bu bir demo profildir; bilgiler örnek amaçlıdır.",
+    hours: weekdays("08:00", "21:00", { "6": { open: "09:00", close: "20:00" }, "0": { open: "09:00", close: "20:00" } }),
+    slotMinutes: 30,
+    vets: [{ name: "Deniz Yalçın", title: "Pet sitter" }],
+    services: SITTER_SERVICES,
+    admin: { email: "sitter@pethotel.local", name: "Deniz Yalçın" },
+  },
+  {
+    kind: "sitter",
+    slug: "ece-bulut-pet-sitter",
+    name: "Ece Bulut",
+    city: "Ankara",
+    district: "Çankaya",
+    address: "Çankaya ve Yenimahalle",
+    phone: "+905000000032",
+    email: "ece-sitter@pethotel.local",
+    description: "Veteriner teknikeri öğrencisiyim; kedi bakımı ve köpek gezdirme. Bu bir demo profildir; bilgiler örnek amaçlıdır.",
+    hours: weekdays("09:00", "20:00", { "6": { open: "10:00", close: "18:00" } }),
+    slotMinutes: 30,
+    vets: [{ name: "Ece Bulut", title: "Pet sitter" }],
+    services: SITTER_SERVICES,
+    priceFactor: 0.9,
+    admin: { email: "ece-sitter@pethotel.local", name: "Ece Bulut" },
+  },
+  {
+    kind: "sitter",
+    slug: "mert-kaya-pet-sitter",
+    name: "Mert Kaya",
+    city: "İzmir",
+    district: "Karşıyaka",
+    address: "Karşıyaka, Bayraklı ve Bornova",
+    phone: "+905000000033",
+    email: "mert-sitter@pethotel.local",
+    description: "Büyük ırk köpeklerle deneyimliyim; sabah ve akşam gezdirme. Bu bir demo profildir; bilgiler örnek amaçlıdır.",
+    hours: weekdays("07:00", "22:00", { "6": { open: "08:00", close: "20:00" }, "0": { open: "08:00", close: "20:00" } }),
+    slotMinutes: 30,
+    vets: [{ name: "Mert Kaya", title: "Pet sitter" }],
+    services: SITTER_SERVICES.filter((x) => x.category === "gezdirme" || x.duration === 45),
+    admin: { email: "mert-sitter@pethotel.local", name: "Mert Kaya" },
   },
 ];
 
@@ -244,16 +361,21 @@ function nextOpenDays(hours: WeekHours, from: string, count: number): string[] {
  * Verilmezse (canlı veritabanı) rastgele, kimsenin bilmediği bir şifre atanır: demo klinikler sitede
  * görünür ama README'de yazan şifreyle panellerine girilemez.
  */
-export async function insertDemoData(tx: Tx, options: { loginPassword?: string } = {}): Promise<void> {
+export async function insertDemoData(
+  tx: Tx,
+  options: { loginPassword?: string; kinds?: BusinessKind[] } = {},
+): Promise<void> {
   const passwordHash = await hashPassword(options.loginPassword ?? randomBytes(24).toString("base64url"));
   const now = nowInIstanbul();
 
-  for (const [index, c] of DEMO_CLINICS.entries()) {
+  for (const c of DEMO_CLINICS) {
+    if (options.kinds && !options.kinds.includes(c.kind)) continue;
     const [clinic] = await tx
       .insert(clinics)
       .values({
         slug: c.slug,
         name: c.name,
+        kind: c.kind,
         status: c.status ?? "active",
         isDemo: true,
         city: c.city,
@@ -275,10 +397,9 @@ export async function insertDemoData(tx: Tx, options: { loginPassword?: string }
       .returning();
 
     const factor = c.priceFactor ?? 1;
-    const chosen = c.serviceNames
-      ? BASE_SERVICES.filter((s) => c.serviceNames!.includes(s.name))
-      : BASE_SERVICES;
-    const insertedServices = await tx
+    const base = c.kind === "hotel" ? [] : (c.services ?? BASE_SERVICES);
+    const chosen = c.serviceNames ? base.filter((s) => c.serviceNames!.includes(s.name)) : base;
+    const insertedServices = chosen.length === 0 ? [] : await tx
       .insert(services)
       .values(
         chosen.map((s, i) => ({
@@ -293,7 +414,7 @@ export async function insertDemoData(tx: Tx, options: { loginPassword?: string }
       )
       .returning();
 
-    const insertedVets = await tx
+    const insertedVets = c.vets.length === 0 ? [] : await tx
       .insert(vets)
       .values(c.vets.map((v, i) => ({ clinicId: clinic.id, name: v.name, title: v.title, bio: v.bio ?? null, sortOrder: i })))
       .returning();
@@ -305,8 +426,44 @@ export async function insertDemoData(tx: Tx, options: { loginPassword?: string }
         : []),
     ]);
 
-    // İlk demo kliniğe örnek randevu ve konaklamalar ekle (panel boş görünmesin).
-    if (index === 0) {
+    // Örnek randevu, ziyaret ve konaklamalar (paneller boş görünmesin).
+    if (c.slug === "deniz-yalcin-pet-sitter") {
+      const svc = (cat: string) => insertedServices.find((s) => s.category === cat)!;
+      const [day1, day2] = nextOpenDays(c.hours, now.date, 2);
+      const sample = [
+        { date: day1, time: "09:00", service: "ziyaret", pet: "Pamuk", species: "cat" as const, owner: "Ayşe Yılmaz", notes: "Moda, Bahariye Cad. Anahtar kapıcıda. Islak mama yarım kutu." },
+        { date: day1, time: "18:30", service: "gezdirme", pet: "Karamel", species: "dog" as const, owner: "Mehmet Kara", notes: "Ataşehir. Tasma kapı arkasında, diğer köpeklere çekingen." },
+        { date: day2, time: "10:00", service: "ziyaret", pet: "Zeytin", species: "cat" as const, owner: "Selin Ak", notes: "Üsküdar. Sabah ilacı mamaya karıştırılacak." },
+      ];
+      await tx.insert(appointments).values(
+        sample.map((a, i) => {
+          const s = svc(a.service);
+          const start = timeToMinutes(a.time);
+          return {
+            code: ["Z-DEMO2A", "Z-DEMO3B", "Z-DEMO4C"][i],
+            clinicId: clinic.id,
+            serviceId: s.id,
+            vetId: insertedVets[0].id,
+            serviceName: s.name,
+            vetName: insertedVets[0].name,
+            price: s.price,
+            date: a.date,
+            startMinute: start,
+            endMinute: start + s.durationMinutes,
+            status: i === 2 ? ("pending" as const) : ("confirmed" as const),
+            source: "online" as const,
+            petName: a.pet,
+            petSpecies: a.species,
+            ownerName: a.owner,
+            ownerPhone: `+9050000000${(i + 40).toString().slice(-2)}`,
+            notes: a.notes,
+            consentAt: new Date(),
+          };
+        }),
+      );
+    }
+
+    if (c.slug === "moda-pati-veteriner") {
       const svc = (name: string) => insertedServices.find((s) => s.name === name)!;
       const [day1, day2] = nextOpenDays(c.hours, now.date, 2);
       const sample = [
@@ -344,6 +501,9 @@ export async function insertDemoData(tx: Tx, options: { loginPassword?: string }
         }),
       );
 
+    }
+
+    if (c.slug === "kadikoy-patili-pet-otel") {
       const openDays = nextOpenDays(c.hours, addDays(now.date, 1), 6);
       const stay = (from: string, nights: number) => {
         let out = addDays(from, nights);

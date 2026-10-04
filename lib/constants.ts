@@ -69,7 +69,8 @@ export const SERVICE_CATEGORIES = [
   "cerrahi",
   "goruntuleme",
   "bakim",
-  "petsitter",
+  "ziyaret",
+  "gezdirme",
   "diger",
 ] as const;
 export type ServiceCategory = (typeof SERVICE_CATEGORIES)[number];
@@ -81,9 +82,78 @@ export const SERVICE_CATEGORY_LABELS: Record<ServiceCategory, string> = {
   cerrahi: "Cerrahi",
   goruntuleme: "Görüntüleme",
   bakim: "Tıraş ve bakım",
-  petsitter: "Pet sitter",
+  ziyaret: "Ev ziyareti",
+  gezdirme: "Köpek gezdirme",
   diger: "Diğer",
 };
+
+/** Hesap türüne göre seçilebilen hizmet kategorileri (pet otel hizmet listesi kullanmaz). */
+export const VET_SERVICE_CATEGORIES: ServiceCategory[] = ["muayene", "asi", "checkup", "dis", "cerrahi", "goruntuleme", "bakim", "diger"];
+export const SITTER_SERVICE_CATEGORIES: ServiceCategory[] = ["ziyaret", "gezdirme", "diger"];
+
+// ---------- Hesap türleri ----------
+// Siteye üç tür işletme kayıt olur; her birinin ayrı paneli ve ayrı sayfa düzeni vardır.
+export const BUSINESS_KINDS = ["vet", "hotel", "sitter"] as const;
+export type BusinessKind = (typeof BUSINESS_KINDS)[number];
+
+export const BUSINESS_KIND_INFO: Record<
+  BusinessKind,
+  {
+    /** Kayıt ve aramada görünen ad. */
+    label: string;
+    /** Kayıt sayfası adresindeki rol (/kayit?rol=...). */
+    slug: string;
+    /** Arama sayfası adresindeki tür (/klinikler?tur=...). Veteriner için boş. */
+    searchTur: string;
+    /** Cümle içinde: "kliniğin", "otelin", "profilin". */
+    noun: string;
+    nounPossessive: string;
+    listTitle: string;
+    panelTitle: string;
+    settingsLabel: string;
+  }
+> = {
+  vet: {
+    label: "Veteriner",
+    slug: "veteriner",
+    searchTur: "",
+    noun: "klinik",
+    nounPossessive: "kliniğin",
+    listTitle: "Veteriner klinikleri",
+    panelTitle: "Klinik paneli",
+    settingsLabel: "Klinik ayarları",
+  },
+  hotel: {
+    label: "Pet otel",
+    slug: "otel",
+    searchTur: "otel",
+    noun: "otel",
+    nounPossessive: "otelin",
+    listTitle: "Pet otelleri",
+    panelTitle: "Otel paneli",
+    settingsLabel: "Otel ayarları",
+  },
+  sitter: {
+    label: "Pet sitter",
+    slug: "sitter",
+    searchTur: "sitter",
+    noun: "pet sitter",
+    nounPossessive: "profilin",
+    listTitle: "Pet sitterlar",
+    panelTitle: "Pet sitter paneli",
+    settingsLabel: "Profil ayarları",
+  },
+};
+
+export function isBusinessKind(v: unknown): v is BusinessKind {
+  return typeof v === "string" && (BUSINESS_KINDS as readonly string[]).includes(v);
+}
+
+/** /kayit?rol=... ve /klinikler?tur=... değerlerinden hesap türü. */
+export function kindFromSlug(v: string | undefined | null): BusinessKind | null {
+  if (!v) return null;
+  return BUSINESS_KINDS.find((k) => BUSINESS_KIND_INFO[k].slug === v || BUSINESS_KIND_INFO[k].searchTur === v) ?? null;
+}
 
 // ---------- Klinikler ve kullanıcılar ----------
 export const CLINIC_STATUSES = ["pending", "active", "suspended"] as const;
@@ -101,6 +171,14 @@ export const USER_ROLE_LABELS: Record<UserRole, string> = {
   clinic_admin: "Klinik yöneticisi",
   clinic_staff: "Klinik personeli",
 };
+
+/** Paneldeki rol etiketi işletme türüne göre değişir. */
+export function roleLabel(role: UserRole, kind: BusinessKind): string {
+  if (role === "superadmin") return USER_ROLE_LABELS.superadmin;
+  if (kind === "sitter") return "Pet sitter";
+  const place = kind === "hotel" ? "Otel" : "Klinik";
+  return role === "clinic_admin" ? `${place} yöneticisi` : `${place} personeli`;
+}
 
 // ---------- Takvim ----------
 export type WeekdayKey = "0" | "1" | "2" | "3" | "4" | "5" | "6"; // 0 = Pazar (JS getDay)

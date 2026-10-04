@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { Loader2, Pencil, Plus } from "lucide-react";
 import { deleteServiceAction, saveServiceAction } from "@/lib/actions/panel";
-import { SERVICE_CATEGORIES, SERVICE_CATEGORY_LABELS, type ServiceCategory } from "@/lib/constants";
+import { SERVICE_CATEGORY_LABELS, type ServiceCategory } from "@/lib/constants";
 import { durationLabel, formatPrice } from "@/lib/format";
 import { Field, fieldAria, FormError } from "@/components/ui/Field";
 
@@ -17,18 +17,26 @@ export type ServiceRow = {
   isActive: boolean;
 };
 
-type Draft = { name: string; category: ServiceCategory; durationMinutes: string; price: string; description: string; isActive: boolean };
+type Draft = {
+  name: string;
+  category: ServiceCategory;
+  durationMinutes: string;
+  price: string;
+  description: string;
+  isActive: boolean;
+};
 
-const toDraft = (s?: ServiceRow): Draft => ({
+const toDraft = (categories: ServiceCategory[], s?: ServiceRow): Draft => ({
   name: s?.name ?? "",
-  category: s?.category ?? "muayene",
+  category: s?.category ?? categories[0],
   durationMinutes: String(s?.durationMinutes ?? 30),
   price: s?.price !== null && s?.price !== undefined ? String(s.price) : "",
   description: s?.description ?? "",
   isActive: s?.isActive ?? true,
 });
 
-export function ServiceManager({ services }: { services: ServiceRow[] }) {
+/** categories: hesap türüne göre seçilebilen kategoriler (veteriner ya da pet sitter). */
+export function ServiceManager({ services, categories }: { services: ServiceRow[]; categories: ServiceCategory[] }) {
   const [editing, setEditing] = useState<string | "new" | null>(services.length === 0 ? "new" : null);
   const [flash, setFlash] = useState<string | null>(null);
 
@@ -41,6 +49,7 @@ export function ServiceManager({ services }: { services: ServiceRow[] }) {
       )}
       {editing === "new" ? (
         <ServiceEditor
+          categories={categories}
           onDone={(msg) => {
             setEditing(null);
             setFlash(msg ?? null);
@@ -66,6 +75,7 @@ export function ServiceManager({ services }: { services: ServiceRow[] }) {
             editing === s.id ? (
               <li key={s.id} className="p-2">
                 <ServiceEditor
+                  categories={categories}
                   service={s}
                   onDone={(msg) => {
                     setEditing(null);
@@ -104,8 +114,8 @@ export function ServiceManager({ services }: { services: ServiceRow[] }) {
   );
 }
 
-function ServiceEditor({ service, onDone }: { service?: ServiceRow; onDone: (message?: string) => void }) {
-  const [d, setD] = useState<Draft>(toDraft(service));
+function ServiceEditor({ service, categories, onDone }: { service?: ServiceRow; categories: ServiceCategory[]; onDone: (message?: string) => void }) {
+  const [d, setD] = useState<Draft>(toDraft(categories, service));
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -158,7 +168,7 @@ function ServiceEditor({ service, onDone }: { service?: ServiceRow; onDone: (mes
         </Field>
         <Field id={`${idp}-category`} label="Kategori">
           <select id={`${idp}-category`} className="input" value={d.category} onChange={(e) => set("category", e.target.value as ServiceCategory)}>
-            {SERVICE_CATEGORIES.map((c) => (
+            {categories.map((c) => (
               <option key={c} value={c}>
                 {SERVICE_CATEGORY_LABELS[c]}
               </option>
@@ -190,7 +200,13 @@ function ServiceEditor({ service, onDone }: { service?: ServiceRow; onDone: (mes
           />
         </Field>
         <Field id={`${idp}-desc`} label="Kısa açıklama" optional error={errors.description} className="sm:col-span-2">
-          <input {...fieldAria(`${idp}-desc`, errors.description)} className="input" value={d.description} onChange={(e) => set("description", e.target.value)} maxLength={300} />
+          <input
+            {...fieldAria(`${idp}-desc`, errors.description)}
+            className="input"
+            value={d.description}
+            onChange={(e) => set("description", e.target.value)}
+            maxLength={300}
+          />
         </Field>
       </div>
       <label className="flex cursor-pointer items-center gap-3">
@@ -199,7 +215,11 @@ function ServiceEditor({ service, onDone }: { service?: ServiceRow; onDone: (mes
       </label>
       <FormError message={error ?? undefined} />
       <div className="flex flex-wrap items-center gap-2">
-        <button type="submit" disabled={pending} className="inline-flex min-h-11 items-center gap-2 rounded-control bg-pine px-5 font-semibold text-white disabled:opacity-60">
+        <button
+          type="submit"
+          disabled={pending}
+          className="inline-flex min-h-11 items-center gap-2 rounded-control bg-pine px-5 font-semibold text-white disabled:opacity-60"
+        >
           {pending && <Loader2 className="h-4 w-4 animate-spin" aria-hidden />}
           {service ? "Değişiklikleri kaydet" : "Hizmeti ekle"}
         </button>
@@ -218,7 +238,11 @@ function ServiceEditor({ service, onDone }: { service?: ServiceRow; onDone: (mes
               </button>
             </span>
           ) : (
-            <button type="button" onClick={() => setConfirmDelete(true)} className="ml-auto min-h-11 rounded-control px-4 font-semibold text-coral hover:bg-coral-soft">
+            <button
+              type="button"
+              onClick={() => setConfirmDelete(true)}
+              className="ml-auto min-h-11 rounded-control px-4 font-semibold text-coral hover:bg-coral-soft"
+            >
               Sil
             </button>
           ))}

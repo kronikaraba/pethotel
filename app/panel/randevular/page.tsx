@@ -14,7 +14,8 @@ export const metadata = { title: "Randevular" };
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
 export default async function AppointmentsPage({ searchParams }: { searchParams: SearchParams }) {
-  const { clinic } = await requireClinicUser();
+  const { clinic } = await requireClinicUser({ kinds: ["vet", "sitter"] });
+  const sitter = clinic.kind === "sitter";
   const sp = await searchParams;
   const today = todayInIstanbul();
   const date = typeof sp.tarih === "string" && isValidDateString(sp.tarih) ? sp.tarih : today;
@@ -33,19 +34,19 @@ export default async function AppointmentsPage({ searchParams }: { searchParams:
   return (
     <>
       <PageHeader
-        title="Randevular"
-        description="Gün seç, takvimi gör ve randevuların durumunu güncelle."
+        title={sitter ? "Ziyaretler" : "Randevular"}
+        description={sitter ? "Gün seç, ziyaret planını gör ve durumlarını güncelle." : "Gün seç, takvimi gör ve randevuların durumunu güncelle."}
         actions={
           <Link href={`/panel/randevular/yeni?tarih=${date}`} className={buttonClass("primary", "md")}>
             <Plus className="h-4 w-4" aria-hidden />
-            Randevu ekle
+            {sitter ? "Ziyaret ekle" : "Randevu ekle"}
           </Link>
         }
       />
 
       {added && (
         <p role="status" className="mb-6 rounded-control border border-pine/30 bg-pine-soft px-4 py-3 font-medium text-pine-dark">
-          Randevu eklendi. Kodu: <span className="tabular">{added}</span>
+          {sitter ? "Ziyaret" : "Randevu"} eklendi. Kodu: <span className="tabular">{added}</span>
         </p>
       )}
 
@@ -56,7 +57,7 @@ export default async function AppointmentsPage({ searchParams }: { searchParams:
           </h2>
           <ul className="divide-y divide-line overflow-hidden rounded-panel border border-[#e9c46a] bg-surface">
             {pending.map((a) => (
-              <AgendaItem key={a.id} a={a} showDate={relativeDayLabel(a.date, today)} />
+              <AgendaItem key={a.id} a={a} showDate={relativeDayLabel(a.date, today)} sitter={sitter} />
             ))}
           </ul>
         </section>
@@ -89,7 +90,7 @@ export default async function AppointmentsPage({ searchParams }: { searchParams:
         </form>
       </div>
 
-      {!open && <p className="mb-4 rounded-control bg-paper px-4 py-3 text-sm text-stone">Klinik bu gün kapalı görünüyor. Online randevu alınmaz; klinikten randevu ekleyebilirsin.</p>}
+      {!open && <p className="mb-4 rounded-control bg-paper px-4 py-3 text-sm text-stone">{sitter ? "Bu gün müsait görünmüyorsun. Online ziyaret alınmaz; elle ekleyebilirsin." : "Klinik bu gün kapalı görünüyor. Online randevu alınmaz; klinikten randevu ekleyebilirsin."}</p>}
 
       {activeVets.length > 0 && list.some((a) => a.status !== "cancelled") && (
         <div className="mb-8 hidden md:block">
@@ -99,10 +100,10 @@ export default async function AppointmentsPage({ searchParams }: { searchParams:
 
       {list.length === 0 ? (
         <EmptyState
-          title="Bu gün için randevu yok."
+          title={sitter ? "Bu gün için ziyaret yok." : "Bu gün için randevu yok."}
           action={
             <Link href={`/panel/randevular/yeni?tarih=${date}`} className={buttonClass("secondary", "md")}>
-              Randevu ekle
+              {sitter ? "Ziyaret ekle" : "Randevu ekle"}
             </Link>
           }
         />
@@ -110,7 +111,7 @@ export default async function AppointmentsPage({ searchParams }: { searchParams:
         <section aria-label="Randevu listesi">
           <ul className="divide-y divide-line overflow-hidden rounded-panel border border-line bg-surface">
             {list.map((a) => (
-              <AgendaItem key={a.id} a={a} />
+              <AgendaItem key={a.id} a={a} sitter={sitter} />
             ))}
           </ul>
         </section>

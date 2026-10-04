@@ -13,12 +13,13 @@ type Params = Promise<{ slug: string }>;
 
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const clinic = await getActiveClinicBySlug((await params).slug);
-  return { title: clinic ? `Pet otel: ${clinic.name}` : "Pet otel", robots: { index: false } };
+  return { title: clinic ? `Konaklama: ${clinic.name}` : "Konaklama", robots: { index: false } };
 }
 
 export default async function BoardingPage({ params }: { params: Params }) {
   const clinic = await getActiveClinicBySlug((await params).slug);
-  if (!clinic) notFound();
+  // Konaklama yalnızca pet otel sayfasında vardır.
+  if (!clinic || clinic.kind !== "hotel") notFound();
   const species = boardingSpeciesOf(clinic);
 
   return (
@@ -28,7 +29,7 @@ export default async function BoardingPage({ params }: { params: Params }) {
         {clinic.name}
       </Link>
       <div className="mt-4 mb-8">
-        <h1 className="text-[2.25rem] leading-[1.05] font-bold sm:text-5xl">Pet otel rezervasyonu</h1>
+        <h1 className="text-[2.25rem] leading-[1.05] font-bold sm:text-5xl">Konaklama iste</h1>
         <p className="mt-2 flex flex-wrap items-center gap-2 text-stone">
           {clinic.name}, {clinic.district} {clinic.isDemo && <DemoBadge />}
         </p>
@@ -36,9 +37,9 @@ export default async function BoardingPage({ params }: { params: Params }) {
 
       {species.length === 0 ? (
         <div className="rounded-panel border border-line bg-surface p-8">
-          <h2 className="text-2xl font-semibold">Bu klinik şu anda konaklama kabul etmiyor.</h2>
-          <p className="mt-2 text-stone">Pet otel hizmeti veren diğer kliniklere göz atabilirsin.</p>
-          <Link href="/klinikler?otel=1" className={buttonClass("night", "md", "mt-5")}>
+          <h2 className="text-2xl font-semibold">Bu otel şu anda konaklama kabul etmiyor.</h2>
+          <p className="mt-2 text-stone">Diğer pet otellere göz atabilirsin.</p>
+          <Link href="/klinikler?tur=otel" className={buttonClass("night", "md", "mt-5")}>
             Pet otelleri gör
           </Link>
         </div>

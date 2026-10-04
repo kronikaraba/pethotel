@@ -54,8 +54,8 @@ export function MobileMenu({
                 {l.label}
               </Link>
             ))}
-            <Link href="/klinik-basvuru" onClick={() => setOpen(false)} className="border-b border-line py-3.5 text-lg font-medium text-stone">
-              Kliniğini ekle
+            <Link href="/kayit" onClick={() => setOpen(false)} className="border-b border-line py-3.5 text-lg font-medium text-stone">
+              Kayıt ol
             </Link>
           </nav>
           <Link

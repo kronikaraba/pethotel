@@ -7,7 +7,7 @@ import { StatusPill } from "@/components/ui/StatusPill";
 import { AppointmentActions } from "./AppointmentActions";
 
 /** Panel randevu satırı: saat, hayvan, hizmet, sahip ve hızlı işlemler. */
-export function AgendaItem({ a, showDate }: { a: Appointment; showDate?: string }) {
+export function AgendaItem({ a, showDate, sitter }: { a: Appointment; showDate?: string; sitter?: boolean }) {
   const muted = a.status === "cancelled" || a.status === "no_show";
   return (
     <li id={`randevu-${a.id}`} className={`grid scroll-mt-24 gap-3 px-4 py-4 sm:grid-cols-[5.5rem_minmax(0,1fr)_auto] sm:gap-5 sm:px-5 ${muted ? "opacity-60" : ""}`}>
@@ -23,11 +23,11 @@ export function AgendaItem({ a, showDate }: { a: Appointment; showDate?: string 
             <span className="font-normal text-stone">, {PET_SPECIES_LABELS[a.petSpecies].toLocaleLowerCase("tr-TR")}</span>
           </p>
           <StatusPill status={a.status} />
-          {a.source === "clinic" && <span className="text-xs text-stone">Klinikten eklendi</span>}
+          {a.source === "clinic" && <span className="text-xs text-stone">{sitter ? "Elle eklendi" : "Klinikten eklendi"}</span>}
         </div>
         <p className="mt-0.5 text-[0.95rem]">
           {a.serviceName}
-          {a.vetName && <span className="text-stone">, {a.vetName}</span>}
+          {a.vetName && !sitter && <span className="text-stone">, {a.vetName}</span>}
         </p>
         <p className="mt-1 flex flex-wrap items-center gap-x-3 text-sm text-stone">
           <span>{a.ownerName}</span>

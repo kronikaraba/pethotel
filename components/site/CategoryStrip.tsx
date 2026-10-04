@@ -9,7 +9,9 @@ export function CategoryStrip({
   hrefFor,
   showAll = false,
   label = "Hizmetler",
+  categories = SERVICE_CATEGORIES,
 }: {
+  categories?: readonly ServiceCategory[];
   active?: ServiceCategory;
   hrefFor: (c: ServiceCategory | undefined) => string;
   showAll?: boolean;
@@ -17,7 +19,7 @@ export function CategoryStrip({
 }) {
   const items: { key: ServiceCategory | undefined; text: string; Icon: typeof LayoutGrid }[] = [
     ...(showAll ? [{ key: undefined, text: "Tümü", Icon: LayoutGrid }] : []),
-    ...SERVICE_CATEGORIES.map((c) => ({ key: c, text: SERVICE_CATEGORY_LABELS[c], Icon: CATEGORY_ICONS[c] })),
+    ...categories.map((c) => ({ key: c, text: SERVICE_CATEGORY_LABELS[c], Icon: CATEGORY_ICONS[c] })),
   ];
   return (
     <nav aria-label={label} className="-mx-4 overflow-x-auto px-4 [scrollbar-width:none] sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden">

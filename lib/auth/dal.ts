@@ -7,6 +7,7 @@ import { eq } from "drizzle-orm";
 import { getDb } from "../db";
 import { clinics, users, type Clinic } from "../db/schema";
 import { readSession } from "./session";
+import type { BusinessKind } from "../constants";
 
 export type CurrentUser = {
   id: string;
@@ -37,8 +38,11 @@ const getClinic = cache(async (id: string): Promise<Clinic | null> => {
 
 export type ClinicContext = { user: CurrentUser & { clinicId: string }; clinic: Clinic; isAdmin: boolean };
 
-/** Klinik paneli için oturum ister. adminOnly ise yalnızca klinik yöneticisi girebilir. */
-export async function requireClinicUser(opts: { adminOnly?: boolean } = {}): Promise<ClinicContext> {
+/**
+ * Panel için oturum ister. adminOnly ise yalnızca yönetici girebilir. kinds verilirse sayfa yalnızca bu
+ * hesap türlerine açıktır (ör. konaklama sayfası pet otele); diğerleri panel ana sayfasına döner.
+ */
+export async function requireClinicUser(opts: { adminOnly?: boolean; kinds?: BusinessKind[] } = {}): Promise<ClinicContext> {
   const user = await getCurrentUser();
   if (!user) redirect("/giris");
   if (user.role === "superadmin") redirect("/admin");
@@ -47,6 +51,7 @@ export async function requireClinicUser(opts: { adminOnly?: boolean } = {}): Pro
   if (!clinic) redirect("/giris");
   const isAdmin = user.role === "clinic_admin";
   if (opts.adminOnly && !isAdmin) redirect("/panel");
+  if (opts.kinds && !opts.kinds.includes(clinic.kind)) redirect("/panel");
   return { user: { ...user, clinicId: user.clinicId }, clinic, isAdmin };
 }
 

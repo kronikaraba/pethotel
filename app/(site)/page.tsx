@@ -1,15 +1,16 @@
 import Link from "next/link";
-import { BedDouble, CalendarCheck, Moon, ShieldCheck, Stethoscope, Syringe, Scissors, Microscope, HeartPulse } from "lucide-react";
+import { BedDouble, CalendarCheck, Dog, House, Moon, ShieldCheck, Stethoscope, Syringe, Scissors, Microscope, HeartPulse } from "lucide-react";
 import { SearchForm } from "@/components/site/SearchForm";
 import { ClinicCard } from "@/components/site/ClinicCard";
 import { CategoryStrip } from "@/components/site/CategoryStrip";
 import { ButtonLink } from "@/components/ui/Button";
 import { getCityStats, getUpcomingSlots } from "@/lib/data/public";
+import { VET_SERVICE_CATEGORIES } from "@/lib/constants";
 
 const FAQ = [
   {
     q: "Randevu almak ücretli mi?",
-    a: "Hayır. PetHotel üzerinden randevu almak ücretsizdir. Muayene ve hizmet ücretini klinikte ödersin; sitede gördüğün fiyatlar kliniğin paylaştığı başlangıç fiyatlarıdır.",
+    a: "Hayır. PetHotel üzerinden randevu almak ücretsizdir. Ücreti kliniğe, otele ya da pet sittera doğrudan ödersin; sitede gördüğün fiyatlar onların paylaştığı başlangıç fiyatlarıdır.",
   },
   {
     q: "Üye olmam gerekiyor mu?",
@@ -21,7 +22,11 @@ const FAQ = [
   },
   {
     q: "Pet otel rezervasyonu nasıl kesinleşir?",
-    a: "Konaklama talebin kliniğe iletilir ve klinik onayladığında kesinleşir. Durumunu Rezervasyonum sayfasından takip edebilirsin. Konaklama için aşıların güncel olması gerekir.",
+    a: "Konaklama talebin otele iletilir ve otel onayladığında kesinleşir. Durumunu Rezervasyonum sayfasından takip edebilirsin. Konaklama için aşıların güncel olması gerekir.",
+  },
+  {
+    q: "Pet sitter evime nasıl gelir?",
+    a: "Pet sitter profilinden hizmeti (ev ziyareti ya da köpek gezdirme) ve saati seç, adresini ve bakım notlarını yaz. Ücreti ziyaret sırasında bakıcıya ödersin.",
   },
   {
     q: "Acil bir durumum var, ne yapmalıyım?",
@@ -47,10 +52,10 @@ export default async function HomePage() {
       <section className="border-b border-line">
         <div className="mx-auto max-w-7xl px-4 pt-8 pb-8 sm:px-6 md:pt-12 lg:px-10">
           <h1 className="mx-auto max-w-[22ch] text-center text-[2.25rem] leading-[1.05] font-bold sm:text-5xl">
-            Veteriner randevusu ve pet otel, tek yerde.
+            Veteriner, pet otel ve pet sitter, tek yerde.
           </h1>
           <p className="mx-auto mt-4 max-w-[52ch] text-center text-lg text-stone">
-            Şehrindeki klinikleri karşılaştır, boş saatleri gör ve üye olmadan randevunu al.
+            Şehrindeki klinikleri, otelleri ve bakıcıları karşılaştır, boş saatleri gör ve üye olmadan randevunu al.
           </p>
           <div className="mx-auto mt-8 max-w-3xl">
             <SearchForm popularCities={popularCities} />
@@ -64,7 +69,7 @@ export default async function HomePage() {
             </li>
           </ul>
           <div className="mt-10">
-            <CategoryStrip hrefFor={(c) => (c ? `/klinikler?hizmet=${c}` : "/klinikler")} />
+            <CategoryStrip categories={VET_SERVICE_CATEGORIES} hrefFor={(c) => (c ? `/klinikler?hizmet=${c}` : "/klinikler")} />
           </div>
         </div>
       </section>
@@ -136,7 +141,7 @@ export default async function HomePage() {
                 <Moon className="h-6 w-6 text-lamp" aria-hidden />
               </h2>
               <p className="mt-3 max-w-[44ch] text-night-muted">
-                Tatile ya da iş seyahatine giderken kedin ya da köpeğin veteriner gözetiminde kalsın. Gecelik fiyatı ve
+                Tatile ya da iş seyahatine giderken kedin ya da köpeğin güvendiğin bir otelde kalsın. Gecelik fiyatı ve
                 boş yer durumunu tarih seçer seçmez gör.
               </p>
               <dl className="mt-7 space-y-4">
@@ -148,19 +153,47 @@ export default async function HomePage() {
                 <div className="flex gap-3">
                   <dt className="sr-only">Onay</dt>
                   <CalendarCheck className="mt-0.5 h-5 w-5 shrink-0 text-lamp" aria-hidden />
-                  <dd>Klinik onaylayınca rezervasyonun kesinleşir</dd>
+                  <dd>Otel onaylayınca rezervasyonun kesinleşir</dd>
                 </div>
                 <div className="flex gap-3">
                   <dt className="sr-only">Sağlık</dt>
                   <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-lamp" aria-hidden />
-                  <dd>Konaklama boyunca hekim bir kapı ötede</dd>
+                  <dd>Girişte aşı karnesi kontrol edilir</dd>
                 </div>
               </dl>
-              <ButtonLink href="/klinikler?otel=1" variant="lamp" className="mt-8">
-                Konaklama yerlerini gör
+              <ButtonLink href="/klinikler?tur=otel" variant="lamp" className="mt-8">
+                Pet otelleri gör
               </ButtonLink>
             </div>
           </div>
+        </div>
+
+        {/* Pet sitter */}
+        <div className="mt-6 grid grid-cols-1 gap-6 rounded-3xl border border-line bg-pine-soft p-7 sm:p-10 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
+          <div>
+            <h2 className="flex items-center gap-3 text-3xl font-bold">
+              Pet sitter
+              <Dog className="h-6 w-6 text-pine" aria-hidden />
+            </h2>
+            <p className="mt-3 max-w-[60ch] text-stone">
+              Evden ayrılmak istemeyen dostun için bakıcı evine gelsin: mama, su, kum kabı, ilaç ve oyun. Köpeğin için
+              günlük gezdirme de planlayabilirsin.
+            </p>
+            <ul className="mt-5 flex flex-wrap gap-x-6 gap-y-2 font-medium">
+              <li className="flex items-center gap-2">
+                <House className="h-[18px] w-[18px] text-pine" aria-hidden /> Ev ziyareti
+              </li>
+              <li className="flex items-center gap-2">
+                <Dog className="h-[18px] w-[18px] text-pine" aria-hidden /> Köpek gezdirme
+              </li>
+              <li className="flex items-center gap-2">
+                <CalendarCheck className="h-[18px] w-[18px] text-pine" aria-hidden /> Saatini sen seç
+              </li>
+            </ul>
+          </div>
+          <ButtonLink href="/klinikler?tur=sitter" size="lg">
+            Pet sitter bul
+          </ButtonLink>
         </div>
       </section>
 
@@ -211,19 +244,19 @@ export default async function HomePage() {
         <div className="grid grid-cols-1 gap-8 rounded-3xl bg-pine p-8 text-white sm:p-12 md:grid-cols-[1.4fr_minmax(0,1fr)] md:items-end">
           <div>
             <h2 id="klinikler-icin" className="text-3xl font-bold sm:text-4xl">
-              Kliniğin PetHotel&apos;de olsun
+              Sen de PetHotel&apos;e katıl
             </h2>
             <p className="mt-4 max-w-[52ch] text-white/80">
-              Online randevu, ekip takvimi ve pet otel doluluğu tek panelde. Telefonla gelen randevuları da aynı takvime
-              işle; çakışmalar otomatik engellenir.
+              Veteriner kliniği, pet otel ya da pet sitter olarak kayıt ol. Her hesap türünün kendi paneli var: randevu
+              takvimi, konaklama doluluğu ya da ziyaret planı tek yerde.
             </p>
           </div>
           <div className="flex flex-wrap gap-3 md:justify-end">
-            <ButtonLink href="/klinik-basvuru" variant="lamp" size="lg">
-              Kliniğini ekle
+            <ButtonLink href="/kayit" variant="lamp" size="lg">
+              Kayıt ol
             </ButtonLink>
             <ButtonLink href="/giris" size="lg" className="border border-white/30 bg-transparent hover:bg-white/10">
-              Klinik girişi
+              Giriş yap
             </ButtonLink>
           </div>
         </div>

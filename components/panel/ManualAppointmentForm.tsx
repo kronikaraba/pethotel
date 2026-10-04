@@ -95,16 +95,19 @@ export function ManualAppointmentForm({
           </select>
         </Field>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field id="vetId" label="Veteriner">
-            <select id="vetId" className="input" value={vetId} onChange={(e) => setVetId(e.target.value)}>
-              <option value="">Fark etmez (ilk boş hekim)</option>
-              {vets.map((v) => (
-                <option key={v.id} value={v.id}>
-                  {v.name}
-                </option>
-              ))}
-            </select>
-          </Field>
+          {/* Tek kişilik takvimde (pet sitter, tek hekimli klinik) seçim gerekmez. */}
+          {vets.length > 1 && (
+            <Field id="vetId" label="Veteriner">
+              <select id="vetId" className="input" value={vetId} onChange={(e) => setVetId(e.target.value)}>
+                <option value="">Fark etmez (ilk boş hekim)</option>
+                {vets.map((v) => (
+                  <option key={v.id} value={v.id}>
+                    {v.name}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          )}
           <Field id="date" label="Tarih" error={errors.date}>
             <input id="date" type="date" className="input" value={date} onChange={(e) => setDate(e.target.value)} />
           </Field>

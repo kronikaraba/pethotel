@@ -4,13 +4,19 @@ import { useState, useTransition } from "react";
 import { Loader2, Plus, X } from "lucide-react";
 import { saveClinicSettingsAction } from "@/lib/actions/panel";
 import { CITIES } from "@/lib/cities";
-import { SLOT_STEP_OPTIONS, WEEKDAYS, type WeekdayKey } from "@/lib/constants";
+import { SLOT_STEP_OPTIONS, WEEKDAYS, type BusinessKind, type WeekdayKey } from "@/lib/constants";
 import type { WeekHours } from "@/lib/db/schema";
 import { formatDateLong } from "@/lib/time";
 import type { ClinicSettingsInput } from "@/lib/validation";
 import { Field, fieldAria, FormError } from "@/components/ui/Field";
 
-type DayDraft = { closed: boolean; open: string; close: string; breakStart: string; breakEnd: string };
+type DayDraft = {
+  closed: boolean;
+  open: string;
+  close: string;
+  breakStart: string;
+  breakEnd: string;
+};
 
 export type SettingsInitial = {
   name: string;
@@ -46,11 +52,75 @@ const AHEAD_OPTIONS = [7, 14, 30, 60, 90];
 
 function toDayDraft(h: WeekHours[WeekdayKey]): DayDraft {
   return h
-    ? { closed: false, open: h.open, close: h.close, breakStart: h.breakStart ?? "", breakEnd: h.breakEnd ?? "" }
-    : { closed: true, open: "09:00", close: "18:00", breakStart: "", breakEnd: "" };
+    ? {
+        closed: false,
+        open: h.open,
+        close: h.close,
+        breakStart: h.breakStart ?? "",
+        breakEnd: h.breakEnd ?? "",
+      }
+    : {
+        closed: true,
+        open: "09:00",
+        close: "18:00",
+        breakStart: "",
+        breakEnd: "",
+      };
 }
 
-export function SettingsForm({ initial, phoneDisplay }: { initial: SettingsInitial; phoneDisplay: string }) {
+const COPY: Record<
+  BusinessKind,
+  {
+    info: string;
+    infoHint: string;
+    name: string;
+    address: string;
+    addressHint?: string;
+    hours: string;
+    hoursHint: string;
+    rules: string;
+    autoConfirm: string;
+    closedHint: string;
+  }
+> = {
+  vet: {
+    info: "Klinik bilgileri",
+    infoHint: "Sitedeki klinik sayfanda görünür.",
+    name: "Klinik adı",
+    address: "Açık adres",
+    hours: "Çalışma saatleri",
+    hoursHint: "Online randevu yalnızca bu saatler içinde alınır. Öğle arası isteğe bağlıdır.",
+    rules: "Randevu kuralları",
+    autoConfirm: "Online randevuları otomatik onayla",
+    closedHint: "Bayram, tatil ya da kongre günlerini ekle; bu günlerde online randevu alınmaz.",
+  },
+  hotel: {
+    info: "Otel bilgileri",
+    infoHint: "Sitedeki otel sayfanda görünür.",
+    name: "Otel adı",
+    address: "Açık adres",
+    hours: "Giriş ve çıkış saatleri",
+    hoursHint: "Misafir kabulü ve teslim bu saatlerde yapılır. Kapalı günlerde giriş ya da çıkış seçilemez.",
+    rules: "Kapalı günler",
+    autoConfirm: "",
+    closedHint: "Giriş ve çıkış yapılamayacak günleri ekle (bayram, tadilat vb.).",
+  },
+  sitter: {
+    info: "Profil bilgileri",
+    infoHint: "Sitedeki profil sayfanda görünür. Açık adresin istenmez.",
+    name: "Adın soyadın",
+    address: "Hizmet verdiğin semtler",
+    addressHint: "Örn. Kadıköy, Ataşehir ve Üsküdar.",
+    hours: "Uygun olduğun saatler",
+    hoursHint: "Ziyaret talepleri yalnızca bu saatler içinde alınır.",
+    rules: "Ziyaret kuralları",
+    autoConfirm: "Ziyaret taleplerini otomatik onayla",
+    closedHint: "Tatilde ya da müsait olmadığın günleri ekle; bu günlerde ziyaret talebi alınmaz.",
+  },
+};
+
+export function SettingsForm({ initial, phoneDisplay, kind }: { initial: SettingsInitial; phoneDisplay: string; kind: BusinessKind }) {
+  const copy = COPY[kind];
   const [info, setInfo] = useState({
     name: initial.name,
     city: initial.city,
@@ -111,13 +181,19 @@ export function SettingsForm({ initial, phoneDisplay }: { initial: SettingsIniti
 
   return (
     <form onSubmit={submit} noValidate className="space-y-8">
-      <Section title="Klinik bilgileri" description="Sitedeki klinik sayfanda görünür.">
+      <Section title={copy.info} description={copy.infoHint}>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field id="name" label="Klinik adı" error={err("name")}>
+          <Field id="name" label={copy.name} error={err("name")}>
             <input {...fieldAria("name", err("name"))} className="input" value={info.name} onChange={(e) => setInfo({ ...info, name: e.target.value })} />
           </Field>
           <Field id="phone" label="Telefon" error={err("phone")}>
-            <input {...fieldAria("phone", err("phone"))} className="input" type="tel" value={info.phone} onChange={(e) => setInfo({ ...info, phone: e.target.value })} />
+            <input
+              {...fieldAria("phone", err("phone"))}
+              className="input"
+              type="tel"
+              value={info.phone}
+              onChange={(e) => setInfo({ ...info, phone: e.target.value })}
+            />
           </Field>
           <Field id="city" label="İl" error={err("city")}>
             <select id="city" className="input" value={info.city} onChange={(e) => setInfo({ ...info, city: e.target.value })}>
@@ -127,13 +203,29 @@ export function SettingsForm({ initial, phoneDisplay }: { initial: SettingsIniti
             </select>
           </Field>
           <Field id="district" label="İlçe" error={err("district")}>
-            <input {...fieldAria("district", err("district"))} className="input" value={info.district} onChange={(e) => setInfo({ ...info, district: e.target.value })} />
+            <input
+              {...fieldAria("district", err("district"))}
+              className="input"
+              value={info.district}
+              onChange={(e) => setInfo({ ...info, district: e.target.value })}
+            />
           </Field>
-          <Field id="address" label="Açık adres" error={err("address")} className="sm:col-span-2">
-            <input {...fieldAria("address", err("address"))} className="input" value={info.address} onChange={(e) => setInfo({ ...info, address: e.target.value })} />
+          <Field id="address" label={copy.address} hint={copy.addressHint} error={err("address")} className="sm:col-span-2">
+            <input
+              {...fieldAria("address", err("address"))}
+              className="input"
+              value={info.address}
+              onChange={(e) => setInfo({ ...info, address: e.target.value })}
+            />
           </Field>
           <Field id="email" label="E-posta" optional error={err("email")}>
-            <input {...fieldAria("email", err("email"))} className="input" type="email" value={info.email} onChange={(e) => setInfo({ ...info, email: e.target.value })} />
+            <input
+              {...fieldAria("email", err("email"))}
+              className="input"
+              type="email"
+              value={info.email}
+              onChange={(e) => setInfo({ ...info, email: e.target.value })}
+            />
           </Field>
           <Field id="description" label="Tanıtım yazısı" optional error={err("description")} className="sm:col-span-2">
             <textarea
@@ -148,7 +240,7 @@ export function SettingsForm({ initial, phoneDisplay }: { initial: SettingsIniti
         </div>
       </Section>
 
-      <Section title="Çalışma saatleri" description="Online randevu yalnızca bu saatler içinde alınır. Öğle arası isteğe bağlıdır.">
+      <Section title={copy.hours} description={copy.hoursHint}>
         <div className="divide-y divide-line">
           {WEEKDAYS.map((d) => {
             const h = hours[d.key];
@@ -176,7 +268,11 @@ export function SettingsForm({ initial, phoneDisplay }: { initial: SettingsIniti
                     <span aria-hidden>–</span>
                     <TimeInput label={`${d.label} öğle arası bitiş`} value={h.breakEnd} onChange={(v) => setDay(d.key, { breakEnd: v })} />
                     {(h.breakStart || h.breakEnd) && (
-                      <button type="button" onClick={() => setDay(d.key, { breakStart: "", breakEnd: "" })} className="text-sm font-medium text-stone underline">
+                      <button
+                        type="button"
+                        onClick={() => setDay(d.key, { breakStart: "", breakEnd: "" })}
+                        className="text-sm font-medium text-stone underline"
+                      >
                         Arayı kaldır
                       </button>
                     )}
@@ -193,60 +289,74 @@ export function SettingsForm({ initial, phoneDisplay }: { initial: SettingsIniti
         </div>
       </Section>
 
-      <Section title="Randevu kuralları">
-        <div className="grid gap-4 sm:grid-cols-3">
-          <Field id="slotMinutes" label="Saat aralığı" hint="Boş saatler bu aralıkla listelenir.">
-            <select
-              id="slotMinutes"
-              className="input"
-              value={rules.slotMinutes}
-              onChange={(e) => setRules({ ...rules, slotMinutes: Number(e.target.value) })}
-            >
-              {SLOT_STEP_OPTIONS.map((v) => (
-                <option key={v} value={v}>
-                  {v} dakikada bir
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field id="minNotice" label="En geç ne zaman alınabilir?">
-            <select
-              id="minNotice"
-              className="input"
-              value={rules.minNoticeMinutes}
-              onChange={(e) => setRules({ ...rules, minNoticeMinutes: Number(e.target.value) })}
-            >
-              {NOTICE_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field id="maxDays" label="En ileri tarih">
-            <select id="maxDays" className="input" value={rules.maxDaysAhead} onChange={(e) => setRules({ ...rules, maxDaysAhead: Number(e.target.value) })}>
-              {AHEAD_OPTIONS.map((v) => (
-                <option key={v} value={v}>
-                  {v} gün sonrasına kadar
-                </option>
-              ))}
-            </select>
-          </Field>
-        </div>
-        <label className="mt-5 flex cursor-pointer items-start gap-3">
-          <input
-            type="checkbox"
-            checked={rules.autoConfirm}
-            onChange={(e) => setRules({ ...rules, autoConfirm: e.target.checked })}
-            className="mt-0.5 h-5 w-5 accent-[var(--color-pine)]"
-          />
-          <span>
-            <span className="font-medium">Online randevuları otomatik onayla</span>
-            <span className="block text-sm text-stone">Kapalıysa randevular &quot;Onay bekliyor&quot; durumunda gelir ve senin onaylaman gerekir.</span>
-          </span>
-        </label>
+      <Section title={copy.rules}>
+        {kind !== "hotel" && (
+          <>
+            <div className="grid gap-4 sm:grid-cols-3">
+              <Field id="slotMinutes" label="Saat aralığı" hint="Boş saatler bu aralıkla listelenir.">
+                <select
+                  id="slotMinutes"
+                  className="input"
+                  value={rules.slotMinutes}
+                  onChange={(e) => setRules({ ...rules, slotMinutes: Number(e.target.value) })}
+                >
+                  {SLOT_STEP_OPTIONS.map((v) => (
+                    <option key={v} value={v}>
+                      {v} dakikada bir
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field id="minNotice" label="En geç ne zaman alınabilir?">
+                <select
+                  id="minNotice"
+                  className="input"
+                  value={rules.minNoticeMinutes}
+                  onChange={(e) =>
+                    setRules({
+                      ...rules,
+                      minNoticeMinutes: Number(e.target.value),
+                    })
+                  }
+                >
+                  {NOTICE_OPTIONS.map((o) => (
+                    <option key={o.value} value={o.value}>
+                      {o.label}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field id="maxDays" label="En ileri tarih">
+                <select
+                  id="maxDays"
+                  className="input"
+                  value={rules.maxDaysAhead}
+                  onChange={(e) => setRules({ ...rules, maxDaysAhead: Number(e.target.value) })}
+                >
+                  {AHEAD_OPTIONS.map((v) => (
+                    <option key={v} value={v}>
+                      {v} gün sonrasına kadar
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            </div>
+            <label className="mt-5 flex cursor-pointer items-start gap-3">
+              <input
+                type="checkbox"
+                checked={rules.autoConfirm}
+                onChange={(e) => setRules({ ...rules, autoConfirm: e.target.checked })}
+                className="mt-0.5 h-5 w-5 accent-[var(--color-pine)]"
+              />
+              <span>
+                <span className="font-medium">{copy.autoConfirm}</span>
+                <span className="block text-sm text-stone">Kapalıysa randevular &quot;Onay bekliyor&quot; durumunda gelir ve senin onaylaman gerekir.</span>
+              </span>
+            </label>
+          </>
+        )}
 
-        <div className="mt-6 border-t border-line pt-5">
+        <div className={kind === "hotel" ? "" : "mt-6 border-t border-line pt-5"}>
           <p className="label">Tatil ve kapalı günler</p>
           <div className="flex flex-wrap items-center gap-2">
             <label htmlFor="newClosed" className="sr-only">
@@ -282,83 +392,116 @@ export function SettingsForm({ initial, phoneDisplay }: { initial: SettingsIniti
               ))}
             </ul>
           ) : (
-            <p className="mt-2 text-sm text-stone">Bayram, tatil ya da kongre günlerini ekle; bu günlerde online randevu alınmaz.</p>
+            <p className="mt-2 text-sm text-stone">{copy.closedHint}</p>
           )}
         </div>
       </Section>
 
-      <section id="konaklama" className="night scroll-mt-24 rounded-panel bg-night p-5 text-night-ink sm:p-7">
-        <h2 className="text-xl font-semibold">Pet otel</h2>
-        <p className="mt-1 text-sm text-night-muted">Kapasite, aynı gece konaklayabilecek en fazla misafir sayısıdır.</p>
-        <label className="mt-5 flex cursor-pointer items-center gap-3">
-          <input
-            type="checkbox"
-            checked={boarding.boardingEnabled}
-            onChange={(e) => setBoarding({ ...boarding, boardingEnabled: e.target.checked })}
-            className="h-5 w-5 accent-[var(--color-lamp)]"
-          />
-          <span className="font-medium">Konaklama talebi kabul et</span>
-        </label>
-        {boarding.boardingEnabled && (
-          <div className="mt-5 grid gap-4 sm:grid-cols-2">
-            <Field id="catCap" label="Kedi kapasitesi" error={err("boardingCatCapacity")}>
-              <input
-                {...fieldAria("catCap", err("boardingCatCapacity"))}
-                className="input"
-                type="number"
-                min={0}
-                value={boarding.boardingCatCapacity}
-                onChange={(e) => setBoarding({ ...boarding, boardingCatCapacity: e.target.value })}
-              />
-            </Field>
-            <Field id="catPrice" label="Kedi gecelik fiyatı (₺)" optional error={err("boardingCatPrice")}>
-              <input
-                {...fieldAria("catPrice", err("boardingCatPrice"))}
-                className="input"
-                type="number"
-                min={0}
-                step={50}
-                value={boarding.boardingCatPrice}
-                onChange={(e) => setBoarding({ ...boarding, boardingCatPrice: e.target.value })}
-              />
-            </Field>
-            <Field id="dogCap" label="Köpek kapasitesi" error={err("boardingDogCapacity")}>
-              <input
-                {...fieldAria("dogCap", err("boardingDogCapacity"))}
-                className="input"
-                type="number"
-                min={0}
-                value={boarding.boardingDogCapacity}
-                onChange={(e) => setBoarding({ ...boarding, boardingDogCapacity: e.target.value })}
-              />
-            </Field>
-            <Field id="dogPrice" label="Köpek gecelik fiyatı (₺)" optional error={err("boardingDogPrice")}>
-              <input
-                {...fieldAria("dogPrice", err("boardingDogPrice"))}
-                className="input"
-                type="number"
-                min={0}
-                step={50}
-                value={boarding.boardingDogPrice}
-                onChange={(e) => setBoarding({ ...boarding, boardingDogPrice: e.target.value })}
-              />
-            </Field>
-            <Field id="bNotes" label="Konaklama kuralları" optional hint="Giriş-çıkış saatleri, aşı şartı, mama vb." error={err("boardingNotes")} className="sm:col-span-2">
-              <textarea
-                {...fieldAria("bNotes", err("boardingNotes"), true)}
-                className="input"
-                rows={3}
-                maxLength={600}
-                value={boarding.boardingNotes}
-                onChange={(e) => setBoarding({ ...boarding, boardingNotes: e.target.value })}
-              />
-            </Field>
-          </div>
-        )}
-      </section>
+      {kind === "hotel" && (
+        <section id="konaklama" className="night scroll-mt-24 rounded-panel bg-night p-5 text-night-ink sm:p-7">
+          <h2 className="text-xl font-semibold">Konaklama</h2>
+          <p className="mt-1 text-sm text-night-muted">Kapasite, aynı gece konaklayabilecek en fazla misafir sayısıdır.</p>
+          <label className="mt-5 flex cursor-pointer items-center gap-3">
+            <input
+              type="checkbox"
+              checked={boarding.boardingEnabled}
+              onChange={(e) => setBoarding({ ...boarding, boardingEnabled: e.target.checked })}
+              className="h-5 w-5 accent-[var(--color-lamp)]"
+            />
+            <span className="font-medium">Konaklama talebi kabul et</span>
+          </label>
+          {boarding.boardingEnabled && (
+            <div className="mt-5 grid gap-4 sm:grid-cols-2">
+              <Field id="catCap" label="Kedi kapasitesi" error={err("boardingCatCapacity")}>
+                <input
+                  {...fieldAria("catCap", err("boardingCatCapacity"))}
+                  className="input"
+                  type="number"
+                  min={0}
+                  value={boarding.boardingCatCapacity}
+                  onChange={(e) =>
+                    setBoarding({
+                      ...boarding,
+                      boardingCatCapacity: e.target.value,
+                    })
+                  }
+                />
+              </Field>
+              <Field id="catPrice" label="Kedi gecelik fiyatı (₺)" optional error={err("boardingCatPrice")}>
+                <input
+                  {...fieldAria("catPrice", err("boardingCatPrice"))}
+                  className="input"
+                  type="number"
+                  min={0}
+                  step={50}
+                  value={boarding.boardingCatPrice}
+                  onChange={(e) =>
+                    setBoarding({
+                      ...boarding,
+                      boardingCatPrice: e.target.value,
+                    })
+                  }
+                />
+              </Field>
+              <Field id="dogCap" label="Köpek kapasitesi" error={err("boardingDogCapacity")}>
+                <input
+                  {...fieldAria("dogCap", err("boardingDogCapacity"))}
+                  className="input"
+                  type="number"
+                  min={0}
+                  value={boarding.boardingDogCapacity}
+                  onChange={(e) =>
+                    setBoarding({
+                      ...boarding,
+                      boardingDogCapacity: e.target.value,
+                    })
+                  }
+                />
+              </Field>
+              <Field id="dogPrice" label="Köpek gecelik fiyatı (₺)" optional error={err("boardingDogPrice")}>
+                <input
+                  {...fieldAria("dogPrice", err("boardingDogPrice"))}
+                  className="input"
+                  type="number"
+                  min={0}
+                  step={50}
+                  value={boarding.boardingDogPrice}
+                  onChange={(e) =>
+                    setBoarding({
+                      ...boarding,
+                      boardingDogPrice: e.target.value,
+                    })
+                  }
+                />
+              </Field>
+              <Field
+                id="bNotes"
+                label="Konaklama kuralları"
+                optional
+                hint="Giriş-çıkış saatleri, aşı şartı, mama vb."
+                error={err("boardingNotes")}
+                className="sm:col-span-2"
+              >
+                <textarea
+                  {...fieldAria("bNotes", err("boardingNotes"), true)}
+                  className="input"
+                  rows={3}
+                  maxLength={600}
+                  value={boarding.boardingNotes}
+                  onChange={(e) => setBoarding({ ...boarding, boardingNotes: e.target.value })}
+                />
+              </Field>
+            </div>
+          )}
+        </section>
+      )}
 
       <div className="sticky bottom-0 z-10 -mx-4 flex flex-wrap items-center gap-4 border-t border-line bg-paper/95 px-4 py-4 backdrop-blur sm:-mx-8 sm:px-8">
-        <button type="submit" disabled={pending} className="inline-flex min-h-12 items-center gap-2 rounded-control bg-pine px-6 font-semibold text-white hover:bg-pine-dark disabled:opacity-60">
+        <button
+          type="submit"
+          disabled={pending}
+          className="inline-flex min-h-12 items-center gap-2 rounded-control bg-pine px-6 font-semibold text-white hover:bg-pine-dark disabled:opacity-60"
+        >
           {pending && <Loader2 className="h-5 w-5 animate-spin" aria-hidden />}
           Ayarları kaydet
         </button>

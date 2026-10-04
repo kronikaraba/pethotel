@@ -5,17 +5,19 @@ const groups = [
   {
     title: "Evcil hayvan sahipleri",
     links: [
-      { href: "/klinikler", label: "Klinik bul" },
-      { href: "/klinikler?otel=1", label: "Pet otel" },
-      { href: "/klinikler?hizmet=petsitter", label: "Pet sitter" },
+      { href: "/klinikler", label: "Veteriner bul" },
+      { href: "/klinikler?tur=otel", label: "Pet otel" },
+      { href: "/klinikler?tur=sitter", label: "Pet sitter" },
       { href: "/rezervasyonum", label: "Rezervasyonumu yönet" },
     ],
   },
   {
-    title: "Klinikler",
+    title: "İşletmeler ve bakıcılar",
     links: [
-      { href: "/klinik-basvuru", label: "Kliniğini ekle" },
-      { href: "/giris", label: "Klinik girişi" },
+      { href: "/kayit?rol=veteriner", label: "Veteriner kliniği kaydı" },
+      { href: "/kayit?rol=otel", label: "Pet otel kaydı" },
+      { href: "/kayit?rol=sitter", label: "Pet sitter kaydı" },
+      { href: "/giris", label: "Giriş yap" },
     ],
   },
   {
@@ -31,7 +33,7 @@ export function SiteFooter() {
         <div className="max-w-sm">
           <Logo tone="lamp" />
           <p className="mt-4 text-night-muted">
-            Veteriner kliniklerini ve evcil hayvan sahiplerini buluşturan randevu ve pet otel platformu.
+            Evcil hayvan sahiplerini veteriner klinikleri, pet oteller ve pet sitterlarla buluşturan platform.
           </p>
         </div>
         <div className="grid grid-cols-1 gap-8 sm:grid-cols-3">

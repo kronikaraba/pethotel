@@ -1,6 +1,6 @@
 import { Search } from "lucide-react";
 import { CITIES } from "@/lib/cities";
-import { SERVICE_CATEGORIES, SERVICE_CATEGORY_LABELS } from "@/lib/constants";
+import { BUSINESS_KIND_INFO, SERVICE_CATEGORY_LABELS, VET_SERVICE_CATEGORIES, type BusinessKind } from "@/lib/constants";
 
 const segment =
   "relative flex min-w-0 flex-col justify-center rounded-full px-6 py-3 transition-colors hover:bg-paper focus-within:bg-surface focus-within:shadow-[0_6px_20px_rgba(0,0,0,0.16)]";
@@ -15,18 +15,18 @@ const segmentSelect =
   "w-full cursor-pointer appearance-none truncate bg-transparent pr-2 text-[0.95rem] text-stone outline-none after:absolute after:inset-0";
 
 /**
- * Klinik arama formu (JS gerektirmez). Airbnb tarzı hap biçimli arama çubuğu.
+ * Veteriner, pet otel ve pet sitter arama formu (JS gerektirmez). Airbnb tarzı hap biçimli arama çubuğu.
  * "Pet Otel" ya da "Pet Sitter" seçilince hizmet alanı CSS :has() ile gizlenir.
  */
 export function SearchForm({
   defaults = {},
   popularCities = [],
 }: {
-  defaults?: { city?: string; category?: string; boarding?: boolean };
+  defaults?: { city?: string; category?: string; kind?: BusinessKind };
   popularCities?: string[];
 }) {
   const otherCities = CITIES.filter((c) => !popularCities.includes(c));
-  const active = defaults.boarding ? "otel" : defaults.category === "petsitter" ? "sitter" : "";
+  const active = BUSINESS_KIND_INFO[defaults.kind ?? "vet"].searchTur;
   return (
     <form action="/klinikler" method="get" className="group/search">
       <fieldset>
@@ -49,7 +49,7 @@ export function SearchForm({
           <select id="ara-sehir" name="sehir" defaultValue={defaults.city ?? ""} className={segmentSelect}>
             <option value="">Tüm şehirler</option>
             {popularCities.length > 0 && (
-              <optgroup label="Klinik olan şehirler">
+              <optgroup label="Kayıtlı işletme olan şehirler">
                 {popularCities.map((c) => (
                   <option key={c} value={c}>
                     {c}
@@ -77,7 +77,7 @@ export function SearchForm({
           </label>
           <select id="ara-hizmet" name="hizmet" defaultValue={defaults.category ?? ""} className={segmentSelect}>
             <option value="">Tüm hizmetler</option>
-            {SERVICE_CATEGORIES.map((c) => (
+            {VET_SERVICE_CATEGORIES.map((c) => (
               <option key={c} value={c}>
                 {SERVICE_CATEGORY_LABELS[c]}
               </option>
@@ -90,7 +90,7 @@ export function SearchForm({
         </div>
         <div className="hidden min-w-0 flex-col justify-center px-6 py-3 group-has-[input[value='sitter']:checked]/search:flex">
           <p className={segmentLabel}>Evde bakım</p>
-          <p className="truncate text-[0.95rem] text-stone">Bakıcı evine gelsin</p>
+          <p className="truncate text-[0.95rem] text-stone">Ev ziyareti ve köpek gezdirme</p>
         </div>
 
         <button

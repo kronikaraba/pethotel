@@ -38,21 +38,28 @@ export default async function BookingDetailPage({ params, searchParams }: { para
 
   if (booking.kind === "appointment") {
     const a = booking.record;
+    // Pet sitter randevusu bir ev ziyaretidir: kişi evine gelir, yol tarifi gerekmez.
+    const sitter = clinic.kind === "sitter";
+    const noun = sitter ? "Ziyaret" : "Randevu";
     const when = `${minutesToTime(a.startMinute)}–${minutesToTime(a.endMinute)}`;
     const cancellable = canCustomerCancelAppointment(a);
     const active = a.status === "pending" || a.status === "confirmed";
-    const heading = isNew
-      ? a.status === "pending"
-        ? "Randevu talebin alındı"
-        : "Randevun alındı"
-      : "Randevun";
-    const message: Record<string, string> = {
-      confirmed: "Randevun onaylı. Randevu saatinden birkaç dakika önce klinikte olman yeterli.",
-      pending: "Klinik onayı bekleniyor. Durumu bu sayfadan takip edebilirsin.",
-      completed: "Bu randevu tamamlandı.",
-      cancelled: a.cancelledBy === "clinic" ? "Bu randevu klinik tarafından iptal edildi." : "Bu randevuyu iptal ettin.",
-      no_show: "Bu randevuya gelinmedi olarak işaretlendi.",
-    };
+    const heading = isNew ? (a.status === "pending" ? `${noun} talebin alındı` : `${noun}n alındı`) : `${noun}n`;
+    const message: Record<string, string> = sitter
+      ? {
+          confirmed: "Ziyaretin onaylı. Pet sitter belirtilen saatte adresine gelecek.",
+          pending: "Pet sitterın onayı bekleniyor. Durumu bu sayfadan takip edebilirsin.",
+          completed: "Bu ziyaret tamamlandı.",
+          cancelled: a.cancelledBy === "clinic" ? "Bu ziyaret pet sitter tarafından iptal edildi." : "Bu ziyareti iptal ettin.",
+          no_show: "Bu ziyaret gerçekleşmedi olarak işaretlendi.",
+        }
+      : {
+          confirmed: "Randevun onaylı. Randevu saatinden birkaç dakika önce klinikte olman yeterli.",
+          pending: "Klinik onayı bekleniyor. Durumu bu sayfadan takip edebilirsin.",
+          completed: "Bu randevu tamamlandı.",
+          cancelled: a.cancelledBy === "clinic" ? "Bu randevu klinik tarafından iptal edildi." : "Bu randevuyu iptal ettin.",
+          no_show: "Bu randevuya gelinmedi olarak işaretlendi.",
+        };
 
     return (
       <div className="mx-auto max-w-5xl px-4 pt-8 sm:px-6 md:pt-12">
@@ -79,18 +86,18 @@ export default async function BookingDetailPage({ params, searchParams }: { para
                 {a.serviceName}
                 <span className="block text-stone">{durationLabel(a.endMinute - a.startMinute)}</span>
               </Detail>
-              <Detail label="Veteriner">{a.vetName ?? "Klinik atayacak"}</Detail>
+              {!sitter && <Detail label="Veteriner">{a.vetName ?? "Klinik atayacak"}</Detail>}
               <Detail label="Evcil hayvan">
                 {a.petName}
                 <span className="block text-stone">{PET_SPECIES_LABELS[a.petSpecies]}</span>
               </Detail>
-              <Detail label="Klinik">
+              <Detail label={sitter ? "Pet sitter" : "Klinik"}>
                 <Link href={`/klinik/${clinic.slug}`} className="text-pine hover:underline">
                   {clinic.name}
                 </Link>
                 <span className="block text-stone">{clinic.address}</span>
               </Detail>
-              {a.price !== null && <Detail label="Ücret (klinikte ödenir)">{formatPrice(a.price)}</Detail>}
+              {a.price !== null && <Detail label={sitter ? "Ücret (bakıcıya ödenir)" : "Ücret (klinikte ödenir)"}>{formatPrice(a.price)}</Detail>}
             </dl>
 
             <div className="mt-8 flex flex-wrap gap-3">
@@ -100,10 +107,12 @@ export default async function BookingDetailPage({ params, searchParams }: { para
                   Takvime ekle
                 </a>
               )}
-              <a href={mapsUrl(clinic.name, clinic.address)} target="_blank" rel="noopener noreferrer" className={buttonClass("secondary", "md")}>
-                <MapPin className="h-4 w-4" aria-hidden />
-                Yol tarifi
-              </a>
+              {!sitter && (
+                <a href={mapsUrl(clinic.name, clinic.address)} target="_blank" rel="noopener noreferrer" className={buttonClass("secondary", "md")}>
+                  <MapPin className="h-4 w-4" aria-hidden />
+                  Yol tarifi
+                </a>
+              )}
               <a href={phoneHref(clinic.phone)} className={buttonClass("secondary", "md")}>
                 <Phone className="h-4 w-4" aria-hidden />
                 {formatPhone(clinic.phone)}
@@ -113,10 +122,10 @@ export default async function BookingDetailPage({ params, searchParams }: { para
             {active && (
               <div className="mt-8 border-t border-line pt-6">
                 {cancellable ? (
-                  <CancelBooking code={a.code} label="Randevuyu iptal et" />
+                  <CancelBooking code={a.code} label={sitter ? "Ziyareti iptal et" : "Randevuyu iptal et"} />
                 ) : (
                   <p className="text-sm text-stone">
-                    Randevuya {CANCEL_CUTOFF_MINUTES} dakikadan az kaldığı için çevrim içi iptal kapandı. Değişiklik için kliniği ara.
+                    {noun}ya {CANCEL_CUTOFF_MINUTES} dakikadan az kaldığı için çevrim içi iptal kapandı. Değişiklik için {sitter ? "pet sitterı" : "kliniği"} ara.
                   </p>
                 )}
               </div>
@@ -134,12 +143,12 @@ export default async function BookingDetailPage({ params, searchParams }: { para
   const cancellable = canCustomerCancelBoarding(r);
   const heading = isNew ? "Konaklama talebin alındı" : "Konaklama rezervasyonun";
   const message: Record<string, string> = {
-    pending: "Talebin kliniğe iletildi. Klinik onayladığında rezervasyonun kesinleşecek; durumu bu sayfadan takip edebilirsin.",
+    pending: "Talebin otele iletildi. Otel onayladığında rezervasyonun kesinleşecek; durumu bu sayfadan takip edebilirsin.",
     confirmed: "Rezervasyonun onaylandı. Giriş gününde aşı karnesini yanında getir.",
-    checked_in: "Dostun şu anda klinikte konaklıyor.",
+    checked_in: "Dostun şu anda otelde konaklıyor.",
     completed: "Konaklama tamamlandı.",
-    cancelled: r.cancelledBy === "clinic" ? "Bu konaklama klinik tarafından iptal edildi." : "Bu konaklamayı iptal ettin.",
-    rejected: "Klinik bu tarihler için talebini kabul edemedi.",
+    cancelled: r.cancelledBy === "clinic" ? "Bu konaklama otel tarafından iptal edildi." : "Bu konaklamayı iptal ettin.",
+    rejected: "Otel bu tarihler için talebini kabul edemedi.",
   };
 
   return (
@@ -160,7 +169,7 @@ export default async function BookingDetailPage({ params, searchParams }: { para
           <p className="mt-3 max-w-[56ch] text-lg text-stone">{message[r.status]}</p>
           {r.clinicNote && (
             <p className="mt-4 rounded-card bg-surface p-4 text-[0.95rem]">
-              <span className="font-semibold">Kliniğin notu: </span>
+              <span className="font-semibold">{clinic.kind === "hotel" ? "Otelin notu: " : "Kliniğin notu: "}</span>
               {r.clinicNote}
             </p>
           )}
@@ -175,7 +184,7 @@ export default async function BookingDetailPage({ params, searchParams }: { para
                 {r.petBreed ? `, ${r.petBreed}` : ""}
               </span>
             </Detail>
-            <Detail label="Klinik">
+            <Detail label={clinic.kind === "hotel" ? "Otel" : "Klinik"}>
               <Link href={`/klinik/${clinic.slug}`} className="text-pine hover:underline">
                 {clinic.name}
               </Link>

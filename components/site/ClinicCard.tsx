@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { BedDouble } from "lucide-react";
+import { BedDouble, Dog } from "lucide-react";
 import type { ClinicListItem } from "@/lib/data/public";
 import { formatPrice } from "@/lib/format";
 import { openStatus } from "@/lib/clinic-hours";
@@ -13,23 +13,24 @@ import { photoUrl } from "@/lib/photos";
 /** Airbnb tarzı klinik kartı: kapak görseli, kısa bilgi ve doğrudan randevuya giden boş saatler. */
 export function ClinicCard({
   item,
-  focus = "appointment",
   maxSlots = 3,
   showServicePrice = false,
 }: {
   item: ClinicListItem;
-  focus?: "appointment" | "boarding";
   maxSlots?: number;
   /** Hizmete göre filtrelenmiş listede kliniğin en düşük fiyatı yerine o hizmetin fiyatını göster. */
   showServicePrice?: boolean;
 }) {
   const { clinic, minPrice, next, cover } = item;
+  // Pet otel kartı gecelik fiyatı, veteriner ve pet sitter kartı boş saatleri öne çıkarır.
+  const focus = clinic.kind === "hotel" ? "boarding" : "appointment";
+  const priceWhere = clinic.kind === "sitter" ? "Fiyat sorulur" : "Fiyat klinikte";
   const status = openStatus(clinic);
   const today = todayInIstanbul();
   const species = boardingSpeciesOf(clinic);
   const nightly = species.map((s) => boardingPrice(clinic, s)).filter((p): p is number => p !== null);
   const boardingFrom = nightly.length ? Math.min(...nightly) : null;
-  const href = focus === "boarding" && species.length > 0 ? `/klinik/${clinic.slug}/konaklama` : `/klinik/${clinic.slug}`;
+  const href = `/klinik/${clinic.slug}`;
 
   return (
     <article className="group relative">
@@ -49,23 +50,29 @@ export function ClinicCard({
           <ClinicCover
             slug={clinic.slug}
             name={clinic.name}
-            boarding={species.length > 0}
+            kind={clinic.kind}
             className="aspect-[4/3] w-full rounded-2xl transition-[filter] duration-200 group-hover:brightness-[0.97]"
           />
         )}
         <div className="absolute top-3 left-3 flex flex-wrap gap-1.5">
           {clinic.isDemo && (
             <span
-              title="Örnek klinik: bilgiler gerçek değildir"
+              title="Örnek kayıt: bilgiler gerçek değildir"
               className="rounded-full bg-white/95 px-2.5 py-1 text-xs font-semibold text-ink shadow-sm"
             >
               Demo
             </span>
           )}
-          {species.length > 0 && (
+          {clinic.kind === "hotel" && (
             <span className="inline-flex items-center gap-1 rounded-full bg-night/90 px-2.5 py-1 text-xs font-semibold text-lamp shadow-sm">
               <BedDouble className="h-3.5 w-3.5" aria-hidden />
               Pet otel
+            </span>
+          )}
+          {clinic.kind === "sitter" && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-white/95 px-2.5 py-1 text-xs font-semibold text-pine shadow-sm">
+              <Dog className="h-3.5 w-3.5" aria-hidden />
+              Pet sitter
             </span>
           )}
         </div>
@@ -84,8 +91,11 @@ export function ClinicCard({
           </span>
         </div>
         <p className="text-[0.95rem] text-stone">
-          {clinic.district}, {clinic.city}
+          {clinic.kind === "sitter" ? `${clinic.address}, ${clinic.city}` : `${clinic.district}, ${clinic.city}`}
         </p>
+        {focus === "boarding" && species.length > 0 && (
+          <p className="text-[0.95rem] text-stone">{species.map((s) => (s === "cat" ? "Kedi" : "Köpek")).join(" ve ")} konaklaması</p>
+        )}
         {focus === "appointment" && next && (
           <p className="text-[0.95rem] text-stone">
             {next.serviceName}, {relativeDayWord(next.date, today)}
@@ -107,7 +117,7 @@ export function ClinicCard({
               <span className="text-stone">&apos;den başlayan hizmetler</span>
             </>
           ) : (
-            <span className="text-stone">Fiyat klinikte</span>
+            <span className="text-stone">{clinic.kind === "hotel" ? "Fiyat otelde" : priceWhere}</span>
           )}
         </p>
 

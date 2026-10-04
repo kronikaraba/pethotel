@@ -11,6 +11,8 @@ import { getBoardingQuote } from "../booking/boarding";
 import { BookingError } from "../booking/errors";
 import {
   ACTIVE_APPOINTMENT_STATUSES,
+  SITTER_SERVICE_CATEGORIES,
+  VET_SERVICE_CATEGORIES,
   WEEKDAYS,
   type AppointmentStatus,
   type BoardingStatus,
@@ -48,7 +50,7 @@ const APPOINTMENT_TRANSITIONS: Record<AppointmentStatus, AppointmentStatus[]> = 
 };
 
 export async function setAppointmentStatusAction(id: string, status: AppointmentStatus): Promise<PanelResult> {
-  const { clinic } = await requireClinicUser();
+  const { clinic } = await requireClinicUser({ kinds: ["vet", "sitter"] });
   const db = await getDb();
   const [a] = await db
     .select()
@@ -70,7 +72,7 @@ export async function setAppointmentStatusAction(id: string, status: Appointment
 export async function createManualAppointmentAction(
   input: z.input<typeof manualAppointmentInput>,
 ): Promise<PanelResult<{ code: string; date: string }>> {
-  const { clinic } = await requireClinicUser();
+  const { clinic } = await requireClinicUser({ kinds: ["vet", "sitter"] });
   const parsed = manualAppointmentInput.safeParse(input);
   if (!parsed.success) return { ok: false, error: CHECK, fieldErrors: fieldErrors(parsed.error) };
   const d = parsed.data;
@@ -109,7 +111,7 @@ const BOARDING_TRANSITIONS: Record<BoardingStatus, BoardingStatus[]> = {
 };
 
 export async function setBoardingStatusAction(id: string, status: BoardingStatus, note?: string): Promise<PanelResult> {
-  const { clinic } = await requireClinicUser();
+  const { clinic } = await requireClinicUser({ kinds: ["hotel"] });
   const db = await getDb();
   const [r] = await db
     .select()
@@ -147,9 +149,13 @@ export async function saveServiceAction(
   id: string | null,
   input: z.input<typeof serviceInput>,
 ): Promise<PanelResult> {
-  const { clinic } = await requireClinicUser({ adminOnly: true });
+  const { clinic } = await requireClinicUser({ adminOnly: true, kinds: ["vet", "sitter"] });
   const parsed = serviceInput.safeParse(input);
   if (!parsed.success) return { ok: false, error: CHECK, fieldErrors: fieldErrors(parsed.error) };
+  const allowed = clinic.kind === "sitter" ? SITTER_SERVICE_CATEGORIES : VET_SERVICE_CATEGORIES;
+  if (!allowed.includes(parsed.data.category)) {
+    return { ok: false, error: CHECK, fieldErrors: { category: "Bu hesap türü için geçerli bir kategori seç." } };
+  }
   const db = await getDb();
   if (id) {
     const updated = await db
@@ -167,7 +173,7 @@ export async function saveServiceAction(
 }
 
 export async function deleteServiceAction(id: string): Promise<PanelResult> {
-  const { clinic } = await requireClinicUser({ adminOnly: true });
+  const { clinic } = await requireClinicUser({ adminOnly: true, kinds: ["vet", "sitter"] });
   const db = await getDb();
   const [{ n }] = await db
     .select({ n: count() })
@@ -191,7 +197,7 @@ export async function deleteServiceAction(id: string): Promise<PanelResult> {
 // ---------------- Ekip ----------------
 
 export async function saveVetAction(id: string | null, input: z.input<typeof vetInput>): Promise<PanelResult> {
-  const { clinic } = await requireClinicUser({ adminOnly: true });
+  const { clinic } = await requireClinicUser({ adminOnly: true, kinds: ["vet"] });
   const parsed = vetInput.safeParse(input);
   if (!parsed.success) return { ok: false, error: CHECK, fieldErrors: fieldErrors(parsed.error) };
   const db = await getDb();
@@ -211,7 +217,7 @@ export async function saveVetAction(id: string | null, input: z.input<typeof vet
 }
 
 export async function deleteVetAction(id: string): Promise<PanelResult> {
-  const { clinic } = await requireClinicUser({ adminOnly: true });
+  const { clinic } = await requireClinicUser({ adminOnly: true, kinds: ["vet"] });
   const db = await getDb();
   const [{ n }] = await db
     .select({ n: count() })
@@ -239,6 +245,9 @@ export async function saveClinicSettingsAction(input: ClinicSettingsInput): Prom
   const parsed = clinicSettingsInput.safeParse(input);
   if (!parsed.success) return { ok: false, error: CHECK, fieldErrors: fieldErrors(parsed.error) };
   const d = parsed.data;
+  if (clinic.kind !== "sitter" && d.address.length < 10) {
+    return { ok: false, error: CHECK, fieldErrors: { address: "Açık adresi yaz (en az 10 karakter)." } };
+  }
 
   const workingHours = Object.fromEntries(
     WEEKDAYS.map(({ key }) => {
@@ -269,7 +278,8 @@ export async function saveClinicSettingsAction(input: ClinicSettingsInput): Prom
       minNoticeMinutes: d.minNoticeMinutes,
       maxDaysAhead: d.maxDaysAhead,
       autoConfirm: d.autoConfirm,
-      boardingEnabled: d.boardingEnabled,
+      // Konaklama yalnızca pet otel hesabında açılabilir.
+      boardingEnabled: clinic.kind === "hotel" && d.boardingEnabled,
       boardingCatCapacity: d.boardingCatCapacity,
       boardingDogCapacity: d.boardingDogCapacity,
       boardingCatPrice: d.boardingCatPrice,
@@ -278,6 +288,10 @@ export async function saveClinicSettingsAction(input: ClinicSettingsInput): Prom
       updatedAt: new Date(),
     })
     .where(eq(clinics.id, clinic.id));
+  // Pet sitterın takvimi kendi adını taşır; profil adı değişince takvim kaydı da güncellenir.
+  if (clinic.kind === "sitter") {
+    await db.update(vets).set({ name: d.name }).where(eq(vets.clinicId, clinic.id));
+  }
   refresh();
   revalidatePath(`/klinik/${clinic.slug}`);
   return { ok: true, message: "Ayarlar kaydedildi." };
@@ -286,7 +300,7 @@ export async function saveClinicSettingsAction(input: ClinicSettingsInput): Prom
 // ---------------- Kullanıcılar ----------------
 
 export async function addStaffUserAction(input: z.input<typeof staffUserInput>): Promise<PanelResult> {
-  const { clinic } = await requireClinicUser({ adminOnly: true });
+  const { clinic } = await requireClinicUser({ adminOnly: true, kinds: ["vet", "hotel"] });
   const parsed = staffUserInput.safeParse(input);
   if (!parsed.success) return { ok: false, error: CHECK, fieldErrors: fieldErrors(parsed.error) };
   const db = await getDb();

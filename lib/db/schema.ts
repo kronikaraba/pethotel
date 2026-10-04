@@ -18,6 +18,7 @@ import {
   APPOINTMENT_STATUSES,
   BOARDING_SPECIES,
   BOARDING_STATUSES,
+  BUSINESS_KINDS,
   CLINIC_STATUSES,
   PET_SPECIES,
   SERVICE_CATEGORIES,
@@ -46,6 +47,8 @@ export const clinics = pgTable(
     id: uuid("id").primaryKey().defaultRandom(),
     slug: text("slug").notNull().unique(),
     name: text("name").notNull(),
+    /** Hesap türü: veteriner kliniği, pet otel ya da pet sitter. Tablo adı tarihsel olarak "clinics". */
+    kind: text("kind", { enum: BUSINESS_KINDS }).notNull().default("vet"),
     status: text("status", { enum: CLINIC_STATUSES }).notNull().default("pending"),
     isDemo: boolean("is_demo").notNull().default(false),
     city: text("city").notNull(),
@@ -74,7 +77,7 @@ export const clinics = pgTable(
   },
   (t) => [
     index("clinics_city_idx").on(t.city, t.district),
-    index("clinics_status_idx").on(t.status),
+    index("clinics_status_idx").on(t.status, t.kind),
   ],
 );
 

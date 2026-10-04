@@ -33,6 +33,8 @@ export type WizardClinic = {
   closedDates: string[];
   maxDaysAhead: number;
   autoConfirm: boolean;
+  /** Pet sitter randevusunda veteriner seçimi yoktur; ziyaret adresi notlara yazılır. */
+  isSitter?: boolean;
 };
 
 type Step = 1 | 2 | 3;
@@ -105,7 +107,8 @@ export function AppointmentWizard({
   const step3Ref = useRef<HTMLDivElement>(null);
 
   const service = services.find((s) => s.id === serviceId) ?? null;
-  const vet = vets.find((v) => v.id === vetId) ?? null;
+  // Tek kişilik takvimde (pet sitter ya da tek hekimli klinik) "fark etmez" yerine kişinin adı gösterilir.
+  const vet = vets.find((v) => v.id === vetId) ?? (vets.length === 1 ? vets[0] : null);
 
   // Boş saatleri getir. Sonuç, isteğin anahtarıyla saklanır; anahtar değişince "yükleniyor" kendiliğinden görünür.
   const requestKey = serviceId && step >= 2 ? `${serviceId}|${vetId}|${date}|${reloadKey}` : null;
@@ -476,7 +479,7 @@ export function AppointmentWizard({
                   </Field>
                   <Field
                     id="notes"
-                    label={service?.category === "petsitter" ? "Adresin ve bakım notların" : "Kliniğe notun"}
+                    label={clinic.isSitter ? "Adresin ve bakım notların" : "Kliniğe notun"}
                     optional
                     error={errors.notes}
                     className="sm:col-span-2"
@@ -487,7 +490,7 @@ export function AppointmentWizard({
                       value={form.notes}
                       onChange={(e) => update("notes", e.target.value)}
                       placeholder={
-                        service?.category === "petsitter"
+                        clinic.isSitter
                           ? "Bakıcının geleceği adres, mama ve ilaç düzeni, anahtar teslimi gibi bilgiler"
                           : "Şikâyet, kullandığı ilaçlar ya da kliniğin bilmesini istediğin bir şey"
                       }
@@ -540,12 +543,16 @@ export function AppointmentWizard({
                 className="inline-flex min-h-13 w-full items-center justify-center gap-2 rounded-[14px] bg-pine px-6 text-base font-semibold text-white hover:bg-pine-dark disabled:opacity-60 sm:w-auto"
               >
                 {pending && <Loader2 className="h-5 w-5 animate-spin" aria-hidden />}
-                {pending ? "Randevun oluşturuluyor" : "Randevuyu onayla"}
+                {pending ? "Randevun oluşturuluyor" : clinic.isSitter ? "Ziyareti onayla" : "Randevuyu onayla"}
               </button>
               <p className="text-sm text-stone">
-                {clinic.autoConfirm
-                  ? "Randevun anında onaylanır. Ücreti klinikte ödersin."
-                  : "Randevu talebin kliniğe iletilir; klinik onayladığında kesinleşir."}
+                {clinic.isSitter
+                  ? clinic.autoConfirm
+                    ? "Ziyaretin anında onaylanır. Ücreti bakıcıya ödersin."
+                    : "Talebin pet sittera iletilir; onayladığında kesinleşir."
+                  : clinic.autoConfirm
+                    ? "Randevun anında onaylanır. Ücreti klinikte ödersin."
+                    : "Randevu talebin kliniğe iletilir; klinik onayladığında kesinleşir."}
               </p>
             </form>
           </StepCard>
@@ -584,7 +591,7 @@ function Summary({
   return (
     <dl className="space-y-3 text-[0.95rem]">
       <div>
-        <dt className="text-sm text-stone">Klinik</dt>
+        <dt className="text-sm text-stone">{clinic.isSitter ? "Pet sitter" : "Klinik"}</dt>
         <dd className="font-medium">
           {clinic.name}
           <span className="block text-sm font-normal text-stone">
@@ -611,13 +618,15 @@ function Summary({
           )}
         </dd>
       </div>
-      <div>
-        <dt className="text-sm text-stone">Veteriner</dt>
-        <dd className="font-medium">{vetName ?? "İlk boş hekim"}</dd>
-      </div>
+      {!clinic.isSitter && (
+        <div>
+          <dt className="text-sm text-stone">Veteriner</dt>
+          <dd className="font-medium">{vetName ?? "İlk boş hekim"}</dd>
+        </div>
+      )}
       {service?.price !== null && service?.price !== undefined && (
         <div className="border-t border-line pt-3">
-          <dt className="text-sm text-stone">Ücret (klinikte ödenir)</dt>
+          <dt className="text-sm text-stone">{clinic.isSitter ? "Ücret (bakıcıya ödenir)" : "Ücret (klinikte ödenir)"}</dt>
           <dd className="font-display text-2xl font-semibold tabular">{formatPrice(service.price)}</dd>
         </div>
       )}

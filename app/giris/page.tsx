@@ -26,15 +26,15 @@ export default async function LoginPage({ searchParams }: { searchParams: Search
       </header>
       <main className="flex flex-1 items-start justify-center px-4 pt-8 pb-16 sm:pt-16">
         <div className="w-full max-w-md">
-          <h1 className="text-[2.25rem] leading-[1.05] font-bold">Klinik girişi</h1>
-          <p className="mt-2 text-stone">Randevularını, pet otel doluluğunu ve ekibini panelden yönet.</p>
+          <h1 className="text-[2.25rem] leading-[1.05] font-bold">Giriş yap</h1>
+          <p className="mt-2 text-stone">Veteriner kliniği, pet otel ve pet sitter hesapları buradan paneline girer.</p>
           <div className="mt-8 rounded-panel border border-line bg-surface p-5 sm:p-7">
             <LoginForm next={next} />
           </div>
           <p className="mt-6 text-[0.95rem] text-stone">
-            Kliniğin henüz PetHotel&apos;de değil mi?{" "}
-            <Link href="/klinik-basvuru" className="font-semibold text-pine underline-offset-4 hover:underline">
-              Kliniğini ekle
+            Henüz hesabın yok mu?{" "}
+            <Link href="/kayit" className="font-semibold text-pine underline-offset-4 hover:underline">
+              Kayıt ol
             </Link>
           </p>
 
@@ -44,12 +44,16 @@ export default async function LoginPage({ searchParams }: { searchParams: Search
               <p className="mt-1 text-stone">Bu kutu yalnızca yerel geliştirme veritabanında görünür.</p>
               <dl className="mt-3 space-y-2">
                 <div>
-                  <dt className="text-stone">Klinik yöneticisi</dt>
+                  <dt className="text-stone">Veteriner kliniği</dt>
                   <dd className="font-medium">moda@pethotel.local / {DEMO_PASSWORD}</dd>
                 </div>
                 <div>
-                  <dt className="text-stone">Klinik personeli</dt>
-                  <dd className="font-medium">resepsiyon@pethotel.local / {DEMO_PASSWORD}</dd>
+                  <dt className="text-stone">Pet otel</dt>
+                  <dd className="font-medium">otel@pethotel.local / {DEMO_PASSWORD}</dd>
+                </div>
+                <div>
+                  <dt className="text-stone">Pet sitter</dt>
+                  <dd className="font-medium">sitter@pethotel.local / {DEMO_PASSWORD}</dd>
                 </div>
                 <div>
                   <dt className="text-stone">Platform yöneticisi</dt>

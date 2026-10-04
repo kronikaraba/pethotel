@@ -1,9 +1,9 @@
 export const BOOKING_ERROR_MESSAGES = {
-  CLINIC_NOT_FOUND: "Klinik bulunamadı ya da şu anda randevu almıyor.",
+  CLINIC_NOT_FOUND: "Bu hesap bulunamadı ya da şu anda rezervasyon almıyor.",
   SERVICE_NOT_FOUND: "Seçtiğin hizmet artık sunulmuyor. Lütfen başka bir hizmet seç.",
   VET_NOT_FOUND: "Seçtiğin veteriner şu anda randevu almıyor.",
   SLOT_TAKEN: "Bu saat az önce doldu. Lütfen başka bir saat seç.",
-  BOARDING_DISABLED: "Bu klinik şu anda konaklama kabul etmiyor.",
+  BOARDING_DISABLED: "Bu otel şu anda konaklama kabul etmiyor.",
   BOARDING_FULL: "Seçtiğin tarihlerde boş yer kalmadı. Başka tarihler dene.",
   STAY_INVALID: "Konaklama tarihleri geçerli değil.",
   NOT_CANCELLABLE: "Bu rezervasyon artık çevrim içi iptal edilemiyor. Lütfen kliniği ara.",

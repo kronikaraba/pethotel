@@ -7,6 +7,12 @@ import { PhotoManager } from "@/components/panel/PhotoManager";
 
 export const metadata = { title: "Fotoğraflar" };
 
+const PHOTO_TIPS = {
+  vet: "Bekleme salonu ve muayene odasının fotoğrafları en çok ilgi görür.",
+  hotel: "Odaların, bahçenin ve oyun alanının fotoğrafları en çok ilgi görür.",
+  sitter: "Baktığın hayvanlarla çekilmiş, yüzünün göründüğü fotoğraflar güven verir.",
+} as const;
+
 export default async function PhotosPage() {
   const { clinic } = await requireClinicUser({ adminOnly: true });
   const photos = await listClinicPhotos(await getDb(), clinic.id);
@@ -16,15 +22,15 @@ export default async function PhotosPage() {
         title="Fotoğraflar"
         description={
           <>
-            İlk fotoğraf kapak olur ve klinik listesinde görünür. Hepsi{" "}
+            İlk fotoğraf kapak olur ve arama listesinde görünür. Hepsi{" "}
             {clinic.status === "active" ? (
               <Link href={`/klinik/${clinic.slug}`} className="font-semibold text-pine underline-offset-4 hover:underline">
-                klinik sayfanda
+                sitedeki sayfanda
               </Link>
             ) : (
-              "klinik sayfanda"
+              "sitedeki sayfanda"
             )}{" "}
-            sergilenir. Bekleme salonu, muayene odası ve pet otel odalarının fotoğrafları en çok ilgi görür.
+            sergilenir. {PHOTO_TIPS[clinic.kind]}
           </>
         }
       />

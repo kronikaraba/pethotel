@@ -1,7 +1,7 @@
 // Uygulama ilk açıldığında gerekli başlangıç verilerini hazırlar:
 // 1) Platform yöneticisi (süper admin) hesabı
 // 2) Yerel geliştirmede (veya SEED_DEMO_DATA=true ise) demo klinikler
-import { count, eq, sql } from "drizzle-orm";
+import { and, count, eq, ne, sql } from "drizzle-orm";
 import type { DB, Driver } from "./index";
 import { clinics, users } from "./schema";
 import { hashPassword } from "../auth/password";
@@ -17,7 +17,10 @@ export async function bootstrapData(db: DB, driver: Driver): Promise<void> {
     driver === "pglite"
       ? process.env.SEED_DEMO_DATA !== "false"
       : process.env.SEED_DEMO_DATA === "true";
-  if (wantDemo) await seedDemoDataIfEmpty(db, driver);
+  if (wantDemo) {
+    const seeded = await seedDemoDataIfEmpty(db, driver);
+    if (!seeded) await upgradeDemoDataToKinds(db, driver);
+  }
 }
 
 async function ensureSuperadmin(db: DB, driver: Driver) {
@@ -69,6 +72,32 @@ export async function seedDemoDataIfEmpty(db: DB, driver: Driver): Promise<boole
     const [{ n }] = await tx.select({ n: count() }).from(clinics);
     if (n > 0) return false;
     await insertDemoData(tx, { loginPassword: driver === "pglite" ? DEMO_PASSWORD : undefined });
+    return true;
+  });
+}
+
+/**
+ * Hesap türleri gelmeden önce yüklenmiş demo veriyi günceller: demo veteriner kliniklerinde pet otel
+ * kapatılır, demo pet oteller ve pet sitterlar eklenir. Bir kez çalışır (demo otel varsa atlanır).
+ */
+export async function upgradeDemoDataToKinds(db: DB, driver: Driver): Promise<boolean> {
+  return db.transaction(async (tx) => {
+    await tx.execute(sql`select pg_advisory_xact_lock(727274)`);
+    const [{ demo }] = await tx.select({ demo: count() }).from(clinics).where(eq(clinics.isDemo, true));
+    if (demo === 0) return false;
+    const [{ typed }] = await tx
+      .select({ typed: count() })
+      .from(clinics)
+      .where(and(eq(clinics.isDemo, true), ne(clinics.kind, "vet")));
+    if (typed > 0) return false;
+    await tx
+      .update(clinics)
+      .set({ boardingEnabled: false })
+      .where(and(eq(clinics.isDemo, true), eq(clinics.kind, "vet")));
+    await insertDemoData(tx, {
+      loginPassword: driver === "pglite" ? DEMO_PASSWORD : undefined,
+      kinds: ["hotel", "sitter"],
+    });
     return true;
   });
 }

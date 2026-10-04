@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import type { BusinessKind } from "@/lib/constants";
 import {
   BedDouble,
   CalendarDays,
@@ -14,25 +15,39 @@ import {
   Users,
 } from "lucide-react";
 
-const ITEMS = [
-  { href: "/panel", label: "Bugün", icon: LayoutDashboard, admin: false },
-  { href: "/panel/randevular", label: "Randevular", icon: CalendarDays, admin: false },
-  { href: "/panel/konaklama", label: "Pet otel", icon: BedDouble, admin: false },
-  { href: "/panel/hizmetler", label: "Hizmetler", icon: Stethoscope, admin: true },
-  { href: "/panel/ekip", label: "Ekip", icon: Users, admin: true },
-  { href: "/panel/fotograflar", label: "Fotoğraflar", icon: Images, admin: true },
-  { href: "/panel/kullanicilar", label: "Kullanıcılar", icon: KeyRound, admin: true },
-  { href: "/panel/ayarlar", label: "Klinik ayarları", icon: Settings, admin: true },
-  { href: "/panel/hesap", label: "Hesabım", icon: UserRound, admin: false },
+const ALL: BusinessKind[] = ["vet", "hotel", "sitter"];
+
+// Her hesap türünün kendi menüsü: veteriner randevu ve ekip, pet otel konaklama, pet sitter ziyaret yönetir.
+const ITEMS: { href: string; label: string | Record<BusinessKind, string>; icon: typeof LayoutDashboard; admin: boolean; kinds: BusinessKind[] }[] = [
+  { href: "/panel", label: "Bugün", icon: LayoutDashboard, admin: false, kinds: ALL },
+  { href: "/panel/randevular", label: { vet: "Randevular", hotel: "", sitter: "Ziyaretler" }, icon: CalendarDays, admin: false, kinds: ["vet", "sitter"] },
+  { href: "/panel/konaklama", label: "Konaklamalar", icon: BedDouble, admin: false, kinds: ["hotel"] },
+  { href: "/panel/hizmetler", label: "Hizmetler", icon: Stethoscope, admin: true, kinds: ["vet", "sitter"] },
+  { href: "/panel/ekip", label: "Ekip", icon: Users, admin: true, kinds: ["vet"] },
+  { href: "/panel/fotograflar", label: "Fotoğraflar", icon: Images, admin: true, kinds: ALL },
+  { href: "/panel/kullanicilar", label: "Kullanıcılar", icon: KeyRound, admin: true, kinds: ["vet", "hotel"] },
+  { href: "/panel/ayarlar", label: { vet: "Klinik ayarları", hotel: "Otel ayarları", sitter: "Profil ayarları" }, icon: Settings, admin: true, kinds: ALL },
+  { href: "/panel/hesap", label: "Hesabım", icon: UserRound, admin: false, kinds: ALL },
 ];
 
 function isActive(pathname: string, href: string) {
   return href === "/panel" ? pathname === "/panel" : pathname === href || pathname.startsWith(`${href}/`);
 }
 
-export function PanelNav({ isAdmin, badges }: { isAdmin: boolean; badges: Partial<Record<string, number>> }) {
+export function PanelNav({
+  isAdmin,
+  kind,
+  badges,
+}: {
+  isAdmin: boolean;
+  kind: BusinessKind;
+  badges: Partial<Record<string, number>>;
+}) {
   const pathname = usePathname();
-  const items = ITEMS.filter((i) => isAdmin || !i.admin);
+  const items = ITEMS.filter((i) => (isAdmin || !i.admin) && i.kinds.includes(kind)).map((i) => ({
+    ...i,
+    label: typeof i.label === "string" ? i.label : i.label[kind],
+  }));
 
   return (
     <>

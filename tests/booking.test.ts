@@ -23,6 +23,9 @@ const { isOpenOn } = await import("@/lib/booking/availability");
 type Clinic = typeof clinics.$inferSelect;
 
 let clinic: Clinic;
+let hotel: Clinic;
+let catHotel: Clinic;
+let sitter: Clinic;
 let serviceId: string;
 let vetIds: string[];
 
@@ -48,6 +51,9 @@ beforeAll(async () => {
   const svc = await db.select().from(services).where(eq(services.clinicId, clinic.id));
   serviceId = svc.find((s) => s.name === "Genel muayene")!.id;
   vetIds = (await db.select().from(vets).where(eq(vets.clinicId, clinic.id))).map((v) => v.id);
+  [hotel] = await db.select().from(clinics).where(eq(clinics.slug, "kadikoy-patili-pet-otel"));
+  [catHotel] = await db.select().from(clinics).where(eq(clinics.slug, "cankaya-mirmir-kedi-oteli"));
+  [sitter] = await db.select().from(clinics).where(eq(clinics.slug, "deniz-yalcin-pet-sitter"));
 }, 60_000);
 
 afterAll(async () => {
@@ -62,14 +68,53 @@ describe("demo veriler", () => {
   });
 });
 
-describe("pet sitter", () => {
-  it("pet sitter araması bu hizmeti veren klinikleri getirir", async () => {
+describe("hesap türleri", () => {
+  it("demo veride üç hesap türü de bulunur", () => {
+    expect(clinic.kind).toBe("vet");
+    expect(clinic.boardingEnabled).toBe(false);
+    expect(hotel.kind).toBe("hotel");
+    expect(hotel.boardingEnabled).toBe(true);
+    expect(sitter.kind).toBe("sitter");
+  });
+
+  it("arama yalnızca seçilen türdeki hesapları getirir", async () => {
     const { searchClinics } = await import("@/lib/data/public");
-    const items = await searchClinics({ category: "petsitter" });
-    expect(items.length).toBeGreaterThan(0);
-    expect(items.map((i) => i.clinic.slug)).toContain("moda-pati-veteriner");
-    expect(items.map((i) => i.clinic.slug)).not.toContain("atasehir-mirmir-veteriner");
-    expect(items.every((i) => i.categories.includes("petsitter"))).toBe(true);
+    for (const kind of ["vet", "hotel", "sitter"] as const) {
+      const items = await searchClinics({ kind });
+      expect(items.length).toBeGreaterThan(0);
+      expect(items.every((i) => i.clinic.kind === kind)).toBe(true);
+    }
+    const sitters = await searchClinics({ kind: "sitter", category: "gezdirme" });
+    expect(sitters.map((i) => i.clinic.slug)).toContain("deniz-yalcin-pet-sitter");
+  });
+
+  it("veteriner konaklama, otel randevu almaz", async () => {
+    const checkIn = openDayFrom(clinic, 20);
+    await expect(
+      createBoardingReservation({
+        clinicId: clinic.id,
+        species: "cat",
+        checkIn,
+        checkOut: addDays(checkIn, 2),
+        petName: "x",
+        vaccinated: true,
+        ownerName: "Test",
+        ownerPhone: "+905320000000",
+      }),
+    ).rejects.toMatchObject({ code: "BOARDING_DISABLED" });
+    await expect(
+      createAppointment({ ...owner, clinicId: hotel.id, serviceId, date: openDayFrom(hotel, 3), startMinute: 600, mode: "online" }),
+    ).rejects.toBeInstanceOf(BookingError);
+  });
+
+  it("pet sitter ziyareti tek kişilik takvimle alınır", async () => {
+    const db = await getDb();
+    const [svc] = await db.select().from(services).where(eq(services.clinicId, sitter.id));
+    const date = openDayFrom(sitter, 3);
+    const slots = await getAvailableSlots({ clinic: sitter, serviceId: svc.id, date });
+    expect(slots.length).toBeGreaterThan(0);
+    const appt = await createAppointment({ ...owner, clinicId: sitter.id, serviceId: svc.id, vetId: null, date, startMinute: slots[0].start, mode: "online" });
+    expect(appt.code).toBeTruthy();
   });
 });
 
@@ -146,20 +191,20 @@ describe("randevu", () => {
 
 describe("pet otel", () => {
   it("kapasite dolunca yeni konaklama kabul edilmez", async () => {
-    const checkIn = openDayFrom(clinic, 20);
+    const checkIn = openDayFrom(hotel, 20);
     let checkOut = addDays(checkIn, 2);
-    while (!isOpenOn(clinic.workingHours, checkOut, clinic.closedDates)) checkOut = addDays(checkOut, 1);
+    while (!isOpenOn(hotel.workingHours, checkOut, hotel.closedDates)) checkOut = addDays(checkOut, 1);
 
-    const quote = await getBoardingQuote({ clinic, species: "dog", checkIn, checkOut });
+    const quote = await getBoardingQuote({ clinic: hotel, species: "dog", checkIn, checkOut });
     expect(quote.ok).toBe(true);
     if (!quote.ok) return;
     const free = quote.minFree;
-    expect(free).toBe(clinic.boardingDogCapacity);
+    expect(free).toBe(hotel.boardingDogCapacity);
 
     const results = await Promise.allSettled(
       Array.from({ length: free + 2 }, (_, i) =>
         createBoardingReservation({
-          clinicId: clinic.id,
+          clinicId: hotel.id,
           species: "dog",
           checkIn,
           checkOut,
@@ -182,7 +227,7 @@ describe("pet otel", () => {
   it("kapalı güne giriş istenirse açıklayıcı hata verir", async () => {
     let sunday = addDays(todayInIstanbul(), 7);
     while (new Date(sunday).getUTCDay() !== 0) sunday = addDays(sunday, 1);
-    const quote = await getBoardingQuote({ clinic, species: "cat", checkIn: sunday, checkOut: addDays(sunday, 2) });
+    const quote = await getBoardingQuote({ clinic: catHotel, species: "cat", checkIn: sunday, checkOut: addDays(sunday, 2) });
     expect(quote.ok).toBe(false);
     if (!quote.ok) expect(quote.problem).toBe("CHECKIN_CLOSED");
   });
@@ -205,5 +250,26 @@ describe("veri bütünlüğü", () => {
         ownerPhone: "+905320000000",
       }),
     ).rejects.toThrow();
+  });
+});
+
+describe("eski demo verinin güncellenmesi", () => {
+  // Son test: demo otel ve sitterları silip eski (yalnızca veteriner) demo veriyi taklit eder.
+  it("eski demo veride veteriner otelleri kapanır, demo oteller ve sitterlar eklenir", async () => {
+    const { upgradeDemoDataToKinds } = await import("@/lib/db/bootstrap");
+    const { getDriver } = await import("@/lib/db");
+    const { inArray } = await import("drizzle-orm");
+    const db = await getDb();
+    await db.delete(clinics).where(inArray(clinics.kind, ["hotel", "sitter"]));
+    await db.update(clinics).set({ boardingEnabled: true }).where(eq(clinics.id, clinic.id));
+
+    expect(await upgradeDemoDataToKinds(db, await getDriver())).toBe(true);
+    const all = await db.select().from(clinics);
+    expect(all.filter((c) => c.kind === "hotel").length).toBeGreaterThan(0);
+    expect(all.filter((c) => c.kind === "sitter").length).toBeGreaterThan(0);
+    expect(all.filter((c) => c.kind === "vet").every((c) => !c.boardingEnabled)).toBe(true);
+
+    // İkinci çağrı bir şey yapmaz.
+    expect(await upgradeDemoDataToKinds(db, await getDriver())).toBe(false);
   });
 });

@@ -13,14 +13,17 @@ type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const data = await getClinicPageData((await params).slug);
-  return { title: data ? `Randevu al: ${data.clinic.name}` : "Randevu al", robots: { index: false } };
+  const label = data?.clinic.kind === "sitter" ? "Ziyaret planla" : "Randevu al";
+  return { title: data ? `${label}: ${data.clinic.name}` : label, robots: { index: false } };
 }
 
 export default async function BookingPage({ params, searchParams }: { params: Params; searchParams: SearchParams }) {
   const [{ slug }, sp] = await Promise.all([params, searchParams]);
   const data = await getClinicPageData(slug);
-  if (!data) notFound();
+  // Pet otel randevu almaz; konaklama sayfasına gider.
+  if (!data || data.clinic.kind === "hotel") notFound();
   const { clinic, services, vets } = data;
+  const sitter = clinic.kind === "sitter";
   const today = todayInIstanbul();
 
   const str = (k: string) => (typeof sp[k] === "string" ? (sp[k] as string) : undefined);
@@ -42,17 +45,17 @@ export default async function BookingPage({ params, searchParams }: { params: Pa
       </Link>
       <div className="mt-4 mb-8 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-[2.25rem] leading-[1.05] font-bold sm:text-5xl">Randevu al</h1>
+          <h1 className="text-[2.25rem] leading-[1.05] font-bold sm:text-5xl">{sitter ? "Ziyaret planla" : "Randevu al"}</h1>
           <p className="mt-2 flex flex-wrap items-center gap-2 text-stone">
-            {clinic.name}, {clinic.district} {clinic.isDemo && <DemoBadge />}
+            {clinic.name}, {sitter ? clinic.address : clinic.district} {clinic.isDemo && <DemoBadge />}
           </p>
         </div>
       </div>
 
       {services.length === 0 || vets.length === 0 ? (
         <div className="rounded-panel border border-line bg-surface p-8">
-          <h2 className="text-2xl font-semibold">Bu klinik henüz online randevu almıyor.</h2>
-          <p className="mt-2 text-stone">Randevu için kliniği telefonla arayabilirsin.</p>
+          <h2 className="text-2xl font-semibold">{sitter ? "Bu pet sitter henüz online ziyaret almıyor." : "Bu klinik henüz online randevu almıyor."}</h2>
+          <p className="mt-2 text-stone">{sitter ? "Ziyaret için telefonla ulaşabilirsin." : "Randevu için kliniği telefonla arayabilirsin."}</p>
           <a href={phoneHref(clinic.phone)} className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-control bg-pine px-5 font-semibold text-white">
             <Phone className="h-4 w-4" aria-hidden />
             {formatPhone(clinic.phone)}
@@ -69,6 +72,7 @@ export default async function BookingPage({ params, searchParams }: { params: Pa
             closedDates: clinic.closedDates,
             maxDaysAhead: clinic.maxDaysAhead,
             autoConfirm: clinic.autoConfirm,
+            isSitter: sitter,
           }}
           services={services.map((s) => ({
             id: s.id,

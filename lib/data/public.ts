@@ -2,7 +2,7 @@
 import { and, asc, count, desc, eq, gte, inArray, lte } from "drizzle-orm";
 import { getDb } from "../db";
 import { appointments, clinics, services, vets, type Clinic, type Service, type Vet } from "../db/schema";
-import { ACTIVE_APPOINTMENT_STATUSES, type ServiceCategory } from "../constants";
+import { ACTIVE_APPOINTMENT_STATUSES, type BusinessKind, type ServiceCategory } from "../constants";
 import { computeSlots, type Interval } from "../booking/availability";
 import { addDays, minutesToTime, nowInIstanbul } from "../time";
 import { foldTr } from "../format";
@@ -38,23 +38,23 @@ export async function getClinicPageData(slug: string) {
   return { clinic, services: serviceRows, vets: vetRows, photos };
 }
 
-export async function getCityStats(): Promise<{ city: string; clinics: number }[]> {
+export async function getCityStats(kind?: BusinessKind): Promise<{ city: string; clinics: number }[]> {
   const db = await getDb();
   const rows = await db
     .select({ city: clinics.city, clinics: count() })
     .from(clinics)
-    .where(eq(clinics.status, "active"))
+    .where(and(eq(clinics.status, "active"), kind ? eq(clinics.kind, kind) : undefined))
     .groupBy(clinics.city)
     .orderBy(desc(count()), asc(clinics.city));
   return rows;
 }
 
-export async function getDistricts(city: string): Promise<string[]> {
+export async function getDistricts(city: string, kind?: BusinessKind): Promise<string[]> {
   const db = await getDb();
   const rows = await db
     .selectDistinct({ district: clinics.district })
     .from(clinics)
-    .where(and(eq(clinics.status, "active"), eq(clinics.city, city)));
+    .where(and(eq(clinics.status, "active"), eq(clinics.city, city), kind ? eq(clinics.kind, kind) : undefined));
   return rows.map((r) => r.district).sort((a, b) => a.localeCompare(b, "tr"));
 }
 
@@ -175,23 +175,24 @@ function pickDisplayService(list: Service[], category?: ServiceCategory): Servic
     const match = list.find((s) => s.category === category);
     if (match) return match;
   }
-  return list.find((s) => s.category === "muayene") ?? list[0];
+  return list.find((s) => s.category === "muayene") ?? list.find((s) => s.category === "ziyaret") ?? list[0];
 }
 
 export type ClinicFilters = {
+  /** Hesap türü: veteriner kliniği, pet otel ya da pet sitter. */
+  kind: BusinessKind;
   city?: string;
   district?: string;
   category?: ServiceCategory;
-  boarding?: boolean;
   q?: string;
 };
 
 export async function searchClinics(filters: ClinicFilters): Promise<ClinicListItem[]> {
   const db = await getDb();
-  const conds = [eq(clinics.status, "active")];
+  const conds = [eq(clinics.status, "active"), eq(clinics.kind, filters.kind)];
   if (filters.city) conds.push(eq(clinics.city, filters.city));
   if (filters.district) conds.push(eq(clinics.district, filters.district));
-  if (filters.boarding) conds.push(eq(clinics.boardingEnabled, true));
+  if (filters.kind === "hotel") conds.push(eq(clinics.boardingEnabled, true));
   if (filters.category) {
     conds.push(
       inArray(
@@ -212,6 +213,11 @@ export async function searchClinics(filters: ClinicFilters): Promise<ClinicListI
   }
 
   const items = await enrich(rows, { category: filters.category });
+  // Pet otellerde saat yerine gecelik fiyat önemli: en uygun fiyatlı başta.
+  if (filters.kind === "hotel") {
+    const nightly = (c: Clinic) => Math.min(c.boardingCatPrice ?? Infinity, c.boardingDogPrice ?? Infinity);
+    return items.sort((a, b) => nightly(a.clinic) - nightly(b.clinic) || a.clinic.name.localeCompare(b.clinic.name, "tr"));
+  }
   return items.sort((a, b) => {
     if (a.next && b.next) {
       if (a.next.date !== b.next.date) return a.next.date < b.next.date ? -1 : 1;
@@ -224,9 +230,11 @@ export async function searchClinics(filters: ClinicFilters): Promise<ClinicListI
 }
 
 /** Ana sayfadaki "boş saatler" listesi: en erken boşluğu olan klinikler. */
-export async function getUpcomingSlots(opts: { city?: string; limit?: number } = {}): Promise<ClinicListItem[]> {
+export async function getUpcomingSlots(
+  opts: { city?: string; limit?: number; kind?: BusinessKind } = {},
+): Promise<ClinicListItem[]> {
   const db = await getDb();
-  const conds = [eq(clinics.status, "active")];
+  const conds = [eq(clinics.status, "active"), eq(clinics.kind, opts.kind ?? "vet")];
   if (opts.city) conds.push(eq(clinics.city, opts.city));
   const rows = await db.select().from(clinics).where(and(...conds)).limit(60);
   const items = await enrich(rows, { perClinic: 4, days: 3 });
@@ -240,12 +248,13 @@ export async function getUpcomingSlots(opts: { city?: string; limit?: number } =
 
 export async function getPlatformCounts() {
   const db = await getDb();
-  const [row] = await db.select({ n: count() }).from(clinics).where(eq(clinics.status, "active"));
-  const [boarding] = await db
-    .select({ n: count() })
+  const rows = await db
+    .select({ kind: clinics.kind, n: count() })
     .from(clinics)
-    .where(and(eq(clinics.status, "active"), eq(clinics.boardingEnabled, true)));
-  return { clinics: row.n, boardingClinics: boarding.n };
+    .where(eq(clinics.status, "active"))
+    .groupBy(clinics.kind);
+  const of = (k: BusinessKind) => rows.find((r) => r.kind === k)?.n ?? 0;
+  return { clinics: of("vet"), boardingClinics: of("hotel"), sitters: of("sitter") };
 }
 
 export type { Clinic, Service, Vet };

@@ -151,7 +151,7 @@ export function BoardingForm({
                   <input type="radio" name="species" value={s.value} checked={selected} onChange={() => setKind(s.value)} className="sr-only" />
                   <Icon className={`h-6 w-6 ${selected ? "text-lamp" : "text-night-muted"}`} aria-hidden />
                   <span className="mt-1 text-lg font-semibold">{s.value === "cat" ? "Kedi" : "Köpek"}</span>
-                  <span className="text-sm text-night-muted">{s.price !== null ? `${formatPrice(s.price)} / gece` : "Fiyat klinikte"}</span>
+                  <span className="text-sm text-night-muted">{s.price !== null ? `${formatPrice(s.price)} / gece` : "Fiyat otelde"}</span>
                 </label>
               );
             })}
@@ -330,7 +330,7 @@ export function BoardingForm({
             <div className="border-t border-line pt-4">
               <p className="text-sm text-stone">Tahmini toplam</p>
               <p className="font-display text-3xl font-bold tabular">{formatPrice(quote.total)}</p>
-              <p className="mt-1 text-sm text-stone">Ödeme klinikte yapılır. Ek hizmetler ücrete eklenebilir.</p>
+              <p className="mt-1 text-sm text-stone">Ödeme otelde yapılır. Ek hizmetler ücrete eklenebilir.</p>
             </div>
           )}
           <FormError message={formError ?? undefined} />
@@ -342,7 +342,7 @@ export function BoardingForm({
             {pending && <Loader2 className="h-5 w-5 animate-spin" aria-hidden />}
             {pending ? "Talep gönderiliyor" : "Konaklama talebi gönder"}
           </button>
-          <p className="text-sm text-stone">Talebin kliniğe iletilir; klinik onayladığında rezervasyonun kesinleşir.</p>
+          <p className="text-sm text-stone">Talebin otele iletilir; otel onayladığında rezervasyonun kesinleşir.</p>
           {notes && <p className="border-t border-line pt-4 text-sm text-stone">{notes}</p>}
         </div>
       </aside>

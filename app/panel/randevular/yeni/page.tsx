@@ -11,7 +11,8 @@ export const metadata = { title: "Randevu ekle" };
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
 export default async function NewAppointmentPage({ searchParams }: { searchParams: SearchParams }) {
-  const { clinic, isAdmin } = await requireClinicUser();
+  const { clinic, isAdmin } = await requireClinicUser({ kinds: ["vet", "sitter"] });
+  const sitter = clinic.kind === "sitter";
   const sp = await searchParams;
   const today = todayInIstanbul();
   const date = typeof sp.tarih === "string" && isValidDateString(sp.tarih) && sp.tarih >= today ? sp.tarih : today;
@@ -21,10 +22,17 @@ export default async function NewAppointmentPage({ searchParams }: { searchParam
 
   return (
     <>
-      <PageHeader title="Randevu ekle" description="Telefonla ya da kapıdan gelen randevuları takvime işle. Çakışan saatler gösterilmez." />
+      <PageHeader
+        title={sitter ? "Ziyaret ekle" : "Randevu ekle"}
+        description={
+          sitter
+            ? "Telefonla ya da mesajla gelen ziyaret taleplerini takvimine işle. Çakışan saatler gösterilmez."
+            : "Telefonla ya da kapıdan gelen randevuları takvime işle. Çakışan saatler gösterilmez."
+        }
+      />
       {services.length === 0 || vets.length === 0 ? (
         <EmptyState
-          title="Önce hizmet ve veteriner eklemelisin."
+          title={sitter ? "Önce bir hizmet eklemelisin." : "Önce hizmet ve veteriner eklemelisin."}
           action={
             isAdmin ? (
               <Link href={services.length === 0 ? "/panel/hizmetler" : "/panel/ekip"} className={buttonClass("primary", "md")}>
@@ -33,7 +41,7 @@ export default async function NewAppointmentPage({ searchParams }: { searchParam
             ) : undefined
           }
         >
-          Randevu takvimi aktif hizmetler ve veterinerler üzerinden oluşur.
+          {sitter ? "Ziyaret takvimi aktif hizmetlerin üzerinden oluşur." : "Randevu takvimi aktif hizmetler ve veterinerler üzerinden oluşur."}
         </EmptyState>
       ) : (
         <ManualAppointmentForm

@@ -2,6 +2,7 @@
 import { z } from "zod";
 import {
   BOARDING_SPECIES,
+  BUSINESS_KINDS,
   PET_SPECIES,
   SERVICE_CATEGORIES,
   SLOT_STEP_OPTIONS,
@@ -123,20 +124,28 @@ export const passwordField = z
   .min(8, "Şifre en az 8 karakter olmalı.")
   .max(100, "Şifre en fazla 100 karakter olabilir.");
 
-export const clinicRegistrationInput = z.object({
-  clinicName: text(3, 80, "Klinik adı"),
-  city: z.enum(CITIES, { error: "İl seç." }),
-  district: text(2, 40, "İlçe"),
-  address: text(10, 200, "Adres"),
-  phone: phoneField,
-  clinicEmail: optionalEmail,
-  description: optionalText(600, "Tanıtım yazısı"),
-  contactName: text(3, 80, "Yetkili adı"),
-  email: requiredEmail,
-  password: passwordField,
-  consent,
-  website: honeypot,
-});
+export const clinicRegistrationInput = z
+  .object({
+    kind: z.enum(BUSINESS_KINDS, { error: "Hesap türünü seç." }),
+    clinicName: text(3, 80, "Ad"),
+    city: z.enum(CITIES, { error: "İl seç." }),
+    district: text(2, 40, "İlçe"),
+    // Pet sitter açık adres yerine hizmet verdiği semtleri yazar.
+    address: text(3, 200, "Adres"),
+    phone: phoneField,
+    clinicEmail: optionalEmail,
+    description: optionalText(600, "Tanıtım yazısı"),
+    contactName: text(3, 80, "Yetkili adı"),
+    email: requiredEmail,
+    password: passwordField,
+    consent,
+    website: honeypot,
+  })
+  .superRefine((d, ctx) => {
+    if (d.kind !== "sitter" && d.address.length < 10) {
+      ctx.addIssue({ code: "custom", path: ["address"], message: "Açık adresi yaz (en az 10 karakter)." });
+    }
+  });
 
 // ---------- Klinik paneli ----------
 
@@ -190,10 +199,11 @@ const dayHoursInput = z
   );
 
 export const clinicSettingsInput = z.object({
-  name: text(3, 80, "Klinik adı"),
+  name: text(3, 80, "Ad"),
   city: z.enum(CITIES, { error: "İl seç." }),
   district: text(2, 40, "İlçe"),
-  address: text(10, 200, "Adres"),
+  // Pet sitter burada hizmet verdiği semtleri yazar; bu yüzden kısa olabilir.
+  address: text(3, 200, "Adres"),
   phone: phoneField,
   email: optionalEmail,
   description: optionalText(600, "Tanıtım yazısı"),

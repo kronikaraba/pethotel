@@ -186,6 +186,8 @@ export async function createAppointment(input: NewAppointmentInput): Promise<App
     if (!clinic) throw new BookingError("CLINIC_NOT_FOUND");
     if (input.mode === "online" && clinic.status !== "active") throw new BookingError("CLINIC_NOT_FOUND");
     if (clinic.status === "suspended") throw new BookingError("CLINIC_NOT_FOUND");
+    // Pet otel randevu değil konaklama alır.
+    if (clinic.kind === "hotel") throw new BookingError("SERVICE_NOT_FOUND");
 
     const [service] = await tx
       .select()

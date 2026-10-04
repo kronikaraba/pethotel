@@ -1,4 +1,5 @@
-import { BedDouble, PawPrint, Stethoscope } from "lucide-react";
+import { BedDouble, Dog, PawPrint, Stethoscope } from "lucide-react";
+import type { BusinessKind } from "@/lib/constants";
 
 /**
  * Klinik fotoğrafı yerine geçen kapak görseli. Renk, klinik adresinden (slug) türetilir;
@@ -35,18 +36,18 @@ function initials(name: string) {
 export function ClinicCover({
   slug,
   name,
-  boarding = false,
+  kind = "vet",
   className = "",
   size = "card",
 }: {
   slug: string;
   name: string;
-  boarding?: boolean;
+  kind?: BusinessKind;
   className?: string;
   size?: "card" | "hero";
 }) {
   const p = PALETTES[hash(slug) % PALETTES.length]!;
-  const Icon = boarding && hash(slug) % 2 === 0 ? BedDouble : Stethoscope;
+  const Icon = kind === "hotel" ? BedDouble : kind === "sitter" ? Dog : Stethoscope;
   const big = size === "hero";
   return (
     <div aria-hidden className={`relative overflow-hidden ${className}`} style={{ background: p.bg, color: p.ink }}>

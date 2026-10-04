@@ -1,3 +1,4 @@
+import type { BusinessKind } from "@/lib/constants";
 import Image from "next/image";
 import type { PhotoMeta } from "@/lib/data/photos";
 import { photoUrl } from "@/lib/photos";
@@ -17,16 +18,16 @@ export function ClinicGallery({
   photos,
   slug,
   name,
-  boarding,
+  kind,
 }: {
   photos: PhotoMeta[];
   slug: string;
   name: string;
-  boarding: boolean;
+  kind: BusinessKind;
 }) {
   if (photos.length === 0) {
     return (
-      <ClinicCover slug={slug} name={name} boarding={boarding} size="hero" className="mt-6 aspect-[4/3] w-full rounded-3xl sm:aspect-[2.6/1]" />
+      <ClinicCover slug={slug} name={name} kind={kind} size="hero" className="mt-6 aspect-[4/3] w-full rounded-3xl sm:aspect-[2.6/1]" />
     );
   }
 

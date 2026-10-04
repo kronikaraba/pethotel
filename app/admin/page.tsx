@@ -4,13 +4,13 @@ import { ExternalLink } from "lucide-react";
 import { requireSuperadmin } from "@/lib/auth/dal";
 import { getDb } from "@/lib/db";
 import { appointments, boardingReservations, clinics } from "@/lib/db/schema";
-import { ACTIVE_APPOINTMENT_STATUSES, CLINIC_STATUS_LABELS, type ClinicStatus } from "@/lib/constants";
+import { ACTIVE_APPOINTMENT_STATUSES, BUSINESS_KIND_INFO, CLINIC_STATUS_LABELS, type ClinicStatus } from "@/lib/constants";
 import { addDays, todayInIstanbul } from "@/lib/time";
 import { formatPhone } from "@/lib/format";
 import { ClinicStatusActions } from "@/components/admin/ClinicStatusActions";
 import { DemoBadge } from "@/components/site/DemoBadge";
 
-export const metadata = { title: "Klinikler" };
+export const metadata = { title: "Hesaplar" };
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
@@ -57,7 +57,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Search
 
   const byStatus = Object.fromEntries(statusCounts.map((r) => [r.status, r.n])) as Partial<Record<ClinicStatus, number>>;
   const stats = [
-    { label: "Yayındaki klinik", value: byStatus.active ?? 0 },
+    { label: "Yayındaki hesap", value: byStatus.active ?? 0 },
     { label: "Onay bekleyen başvuru", value: byStatus.pending ?? 0, warn: (byStatus.pending ?? 0) > 0 },
     { label: "7 günlük aktif randevu", value: weekAppointments.n },
     { label: "Bekleyen konaklama talebi", value: pendingBoarding.n },
@@ -65,8 +65,8 @@ export default async function AdminPage({ searchParams }: { searchParams: Search
 
   return (
     <>
-      <h1 className="text-3xl font-bold sm:text-4xl">Klinikler</h1>
-      <p className="mt-1.5 text-stone">Başvuruları onayla, klinikleri yayından kaldır ya da yeniden yayına al.</p>
+      <h1 className="text-3xl font-bold sm:text-4xl">Hesaplar</h1>
+      <p className="mt-1.5 text-stone">Veteriner, pet otel ve pet sitter başvurularını onayla, yayından kaldır ya da yeniden yayına al.</p>
 
       <dl className="mt-8 grid grid-cols-2 overflow-hidden rounded-panel border border-line bg-surface md:grid-cols-4">
         {stats.map((s, i) => (
@@ -93,7 +93,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Search
       </nav>
 
       {rows.length === 0 ? (
-        <p className="rounded-panel border border-dashed border-line-strong bg-surface px-6 py-8 text-stone">Bu filtrede klinik yok.</p>
+        <p className="rounded-panel border border-dashed border-line-strong bg-surface px-6 py-8 text-stone">Bu filtrede hesap yok.</p>
       ) : (
         <ul className="divide-y divide-line overflow-hidden rounded-panel border border-line bg-surface">
           {rows.map(({ clinic: c, adminEmail, upcoming }) => (
@@ -101,6 +101,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Search
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
                   <p className="font-semibold">{c.name}</p>
+                  <span className="rounded-full border border-line-strong px-2.5 py-0.5 text-xs font-semibold">{BUSINESS_KIND_INFO[c.kind].label}</span>
                   <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${STATUS_STYLE[c.status]}`}>{CLINIC_STATUS_LABELS[c.status]}</span>
                   {c.isDemo && <DemoBadge />}
                   {c.status === "active" && (
@@ -116,7 +117,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Search
                 </p>
                 <p className="mt-0.5 text-sm text-stone">
                   Başvuru {dateFmt.format(c.createdAt)}
-                  {c.approvedAt ? `, onay ${dateFmt.format(c.approvedAt)}` : ""}. Yaklaşan randevu: {upcoming}
+                  {c.approvedAt ? `, onay ${dateFmt.format(c.approvedAt)}` : ""}{c.kind === "hotel" ? "" : `. Yaklaşan ${c.kind === "sitter" ? "ziyaret" : "randevu"}: ${upcoming}`}
                 </p>
               </div>
               <ClinicStatusActions id={c.id} status={c.status} />

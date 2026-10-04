@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { BedDouble, ChevronRight, Clock, Mail, MapPin, Moon, Phone } from "lucide-react";
+import { BedDouble, ChevronRight, Clock, Dog, Mail, MapPin, Moon, Phone } from "lucide-react";
 import { getClinicPageData } from "@/lib/data/public";
-import { SERVICE_CATEGORIES, SERVICE_CATEGORY_LABELS } from "@/lib/constants";
+import { BUSINESS_KIND_INFO, SERVICE_CATEGORIES, SERVICE_CATEGORY_LABELS } from "@/lib/constants";
 import { durationLabel, formatPhone, formatPrice, phoneHref } from "@/lib/format";
 import { openStatus, weekSummary } from "@/lib/clinic-hours";
 import { boardingCapacity, boardingPrice, boardingSpeciesOf } from "@/lib/booking/boarding";
@@ -15,13 +15,24 @@ type Params = Promise<{ slug: string }>;
 
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const data = await getClinicPageData((await params).slug);
-  if (!data) return { title: "Klinik bulunamadı" };
+  if (!data) return { title: "Sayfa bulunamadı" };
   const { clinic } = data;
-  return {
-    title: `${clinic.name} (${clinic.district}, ${clinic.city})`,
-    description: `${clinic.name} için online randevu al: hizmetler, fiyatlar, çalışma saatleri${clinic.boardingEnabled ? " ve pet otel" : ""}.`,
-  };
+  const description =
+    clinic.kind === "hotel"
+      ? `${clinic.name}: gecelik fiyatlar, kapasite ve konaklama kuralları. Online konaklama iste.`
+      : clinic.kind === "sitter"
+        ? `${clinic.name}, ${clinic.city} pet sitter: ev ziyareti ve köpek gezdirme fiyatları, uygun saatler.`
+        : `${clinic.name} için online randevu al: hizmetler, fiyatlar ve çalışma saatleri.`;
+  return { title: `${clinic.name} (${clinic.kind === "sitter" ? "Pet sitter, " : ""}${clinic.district}, ${clinic.city})`, description };
 }
+
+const PAY_NOTE = {
+  vet: "Randevu ücretsizdir, ödemeyi klinikte yaparsın.",
+  hotel: "Talep ücretsizdir; otel onaylayınca kesinleşir, ödemeyi otelde yaparsın.",
+  sitter: "Talep ücretsizdir, ödemeyi ziyarette bakıcıya yaparsın.",
+} as const;
+
+const HOURS_TITLE = { vet: "Çalışma saatleri", hotel: "Giriş ve çıkış saatleri", sitter: "Uygun olduğu saatler" } as const;
 
 function mapsUrl(name: string, address: string) {
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${name} ${address}`)}`;
@@ -41,11 +52,16 @@ export default async function ClinicPage({ params }: { params: Params }) {
   if (!data) notFound();
   const { clinic, services, vets, photos } = data;
   const status = openStatus(clinic);
-  const species = boardingSpeciesOf(clinic);
-  const grouped = SERVICE_CATEGORIES.map((c) => ({ category: c, items: services.filter((s) => s.category === c) })).filter(
-    (g) => g.items.length > 0,
-  );
-  const canBook = services.length > 0 && vets.length > 0;
+  const kind = clinic.kind;
+  const info = BUSINESS_KIND_INFO[kind];
+  // Pet otel konaklama, veteriner ve pet sitter randevu (ziyaret) alır.
+  const species = kind === "hotel" ? boardingSpeciesOf(clinic) : [];
+  const grouped = SERVICE_CATEGORIES.map((c) => ({ category: c, items: services.filter((s) => s.category === c) })).filter((g) => g.items.length > 0);
+  const canBook = kind !== "hotel" && services.length > 0 && vets.length > 0;
+  const bookLabel = kind === "sitter" ? "Ziyaret planla" : "Randevu al";
+  const nightly = species.map((sp) => boardingPrice(clinic, sp)).filter((p): p is number => p !== null);
+  const nightlyFrom = nightly.length ? Math.min(...nightly) : null;
+  const listHref = info.searchTur ? `/klinikler?tur=${info.searchTur}` : "/klinikler";
   const bookHref = `/klinik/${clinic.slug}/randevu`;
   const boardHref = `/klinik/${clinic.slug}/konaklama`;
   const prices = services.map((s) => s.price).filter((p): p is number => p !== null);
@@ -56,15 +72,15 @@ export default async function ClinicPage({ params }: { params: Params }) {
       <nav aria-label="Konum" className="text-sm text-stone">
         <ol className="flex flex-wrap items-center gap-1">
           <li>
-            <Link href="/klinikler" className="hover:text-pine">
-              Klinikler
+            <Link href={listHref} className="hover:text-pine">
+              {info.listTitle}
             </Link>
           </li>
           <li aria-hidden>
             <ChevronRight className="h-4 w-4" />
           </li>
           <li>
-            <Link href={`/klinikler?sehir=${encodeURIComponent(clinic.city)}`} className="hover:text-pine">
+            <Link href={`${listHref}${info.searchTur ? "&" : "?"}sehir=${encodeURIComponent(clinic.city)}`} className="hover:text-pine">
               {clinic.city}
             </Link>
           </li>
@@ -85,9 +101,15 @@ export default async function ClinicPage({ params }: { params: Params }) {
             {clinic.isDemo && <DemoBadge />}
           </div>
           <ul className="mt-3 flex flex-wrap gap-x-6 gap-y-2 text-stone">
+            {kind === "sitter" && (
+              <li className="inline-flex items-center gap-2 font-medium text-pine">
+                <Dog className="h-4 w-4" aria-hidden />
+                Pet sitter
+              </li>
+            )}
             <li className="inline-flex items-center gap-2">
               <MapPin className="h-4 w-4" aria-hidden />
-              {clinic.district}, {clinic.city}
+              {kind === "sitter" ? `${clinic.address}, ${clinic.city}` : `${clinic.district}, ${clinic.city}`}
             </li>
             <li className={`inline-flex items-center gap-2 ${status.open ? "font-medium text-pine" : ""}`}>
               <Clock className="h-4 w-4" aria-hidden />
@@ -103,7 +125,7 @@ export default async function ClinicPage({ params }: { params: Params }) {
         </div>
       </header>
 
-      <ClinicGallery photos={photos} slug={clinic.slug} name={clinic.name} boarding={species.length > 0} />
+      <ClinicGallery photos={photos} slug={clinic.slug} name={clinic.name} kind={kind} />
 
       <div className="mt-10 grid grid-cols-1 gap-12 lg:grid-cols-[minmax(0,1fr)_370px] lg:gap-16">
         <div className="min-w-0 space-y-14">
@@ -116,54 +138,71 @@ export default async function ClinicPage({ params }: { params: Params }) {
             </section>
           )}
 
-          {/* Hizmetler */}
-          <section aria-labelledby="hizmetler">
-            <h2 id="hizmetler" className="text-2xl font-bold sm:text-3xl">
-              Hizmetler ve fiyatlar
-            </h2>
-            {grouped.length === 0 ? (
-              <p className="mt-4 text-stone">Klinik henüz online randevuya açık hizmet eklemedi.</p>
-            ) : (
-              <div className="mt-6 space-y-8">
-                {grouped.map((g) => (
-                  <div key={g.category}>
-                    <h3 className="font-sans text-sm font-semibold tracking-normal text-stone">{SERVICE_CATEGORY_LABELS[g.category]}</h3>
-                    <ul className="mt-2 divide-y divide-line border-y border-line">
-                      {g.items.map((s) => (
-                        <li key={s.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-6 gap-y-1 py-4 sm:grid-cols-[minmax(0,1fr)_5rem_6rem_auto]">
-                          <div className="min-w-0">
-                            <p className="font-semibold">{s.name}</p>
-                            {s.description && <p className="mt-0.5 text-sm text-stone">{s.description}</p>}
-                          </div>
-                          <p className="col-start-1 row-start-2 text-sm text-stone tabular sm:col-start-auto sm:row-start-auto">
-                            {durationLabel(s.durationMinutes)}
-                            <span className="font-semibold text-ink sm:hidden">
-                              {", "}
-                              {s.price !== null ? formatPrice(s.price) : "fiyat klinikte"}
-                            </span>
-                          </p>
-                          <p className="hidden text-right font-semibold tabular sm:block">{s.price !== null ? formatPrice(s.price) : "Klinikte"}</p>
-                          {canBook && (
-                            <Link
-                              href={`${bookHref}?hizmet=${s.id}`}
-                              className={buttonClass("secondary", "sm", "col-start-2 row-span-2 row-start-1 sm:col-start-auto sm:row-span-1 sm:row-start-auto")}
-                              aria-label={`Seç: ${s.name} için randevu al`}
-                            >
-                              Seç
-                            </Link>
-                          )}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ))}
-                <p className="text-sm text-stone">Fiyatlar kliniğin paylaştığı başlangıç fiyatlarıdır; muayene sonrası değişebilir.</p>
-              </div>
-            )}
-          </section>
+          {/* Hizmetler (veteriner ve pet sitter) */}
+          {kind !== "hotel" && (
+            <section aria-labelledby="hizmetler">
+              <h2 id="hizmetler" className="text-2xl font-bold sm:text-3xl">
+                Hizmetler ve fiyatlar
+              </h2>
+              {grouped.length === 0 ? (
+                <p className="mt-4 text-stone">
+                  {kind === "sitter" ? "Henüz online ziyarete açık hizmet eklenmedi." : "Klinik henüz online randevuya açık hizmet eklemedi."}
+                </p>
+              ) : (
+                <div className="mt-6 space-y-8">
+                  {grouped.map((g) => (
+                    <div key={g.category}>
+                      <h3 className="font-sans text-sm font-semibold tracking-normal text-stone">{SERVICE_CATEGORY_LABELS[g.category]}</h3>
+                      <ul className="mt-2 divide-y divide-line border-y border-line">
+                        {g.items.map((s) => (
+                          <li
+                            key={s.id}
+                            className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-6 gap-y-1 py-4 sm:grid-cols-[minmax(0,1fr)_5rem_6rem_auto]"
+                          >
+                            <div className="min-w-0">
+                              <p className="font-semibold">{s.name}</p>
+                              {s.description && <p className="mt-0.5 text-sm text-stone">{s.description}</p>}
+                            </div>
+                            <p className="col-start-1 row-start-2 text-sm text-stone tabular sm:col-start-auto sm:row-start-auto">
+                              {durationLabel(s.durationMinutes)}
+                              <span className="font-semibold text-ink sm:hidden">
+                                {", "}
+                                {s.price !== null ? formatPrice(s.price) : kind === "sitter" ? "fiyat sorulur" : "fiyat klinikte"}
+                              </span>
+                            </p>
+                            <p className="hidden text-right font-semibold tabular sm:block">
+                              {s.price !== null ? formatPrice(s.price) : kind === "sitter" ? "Sorulur" : "Klinikte"}
+                            </p>
+                            {canBook && (
+                              <Link
+                                href={`${bookHref}?hizmet=${s.id}`}
+                                className={buttonClass(
+                                  "secondary",
+                                  "sm",
+                                  "col-start-2 row-span-2 row-start-1 sm:col-start-auto sm:row-span-1 sm:row-start-auto",
+                                )}
+                                aria-label={`Seç: ${s.name} için ${kind === "sitter" ? "ziyaret planla" : "randevu al"}`}
+                              >
+                                Seç
+                              </Link>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                  <p className="text-sm text-stone">
+                    {kind === "sitter"
+                      ? "Fiyatlar pet sitterın paylaştığı ziyaret başına fiyatlardır; ücreti ziyarette ödersin."
+                      : "Fiyatlar kliniğin paylaştığı başlangıç fiyatlarıdır; muayene sonrası değişebilir."}
+                  </p>
+                </div>
+              )}
+            </section>
+          )}
 
           {/* Ekip */}
-          {vets.length > 0 && (
+          {kind === "vet" && vets.length > 0 && (
             <section aria-labelledby="ekip">
               <h2 id="ekip" className="text-2xl font-bold sm:text-3xl">
                 Veteriner ekibi
@@ -192,7 +231,7 @@ export default async function ClinicPage({ params }: { params: Params }) {
           {species.length > 0 && (
             <section aria-labelledby="pet-otel" className="night rounded-3xl bg-night p-7 text-night-ink sm:p-9">
               <h2 id="pet-otel" className="flex items-center gap-3 text-2xl font-bold sm:text-3xl">
-                Pet otel
+                Konaklama
                 <Moon className="h-6 w-6 text-lamp" aria-hidden />
               </h2>
               <dl className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -205,7 +244,7 @@ export default async function ClinicPage({ params }: { params: Params }) {
                         {sp === "cat" ? "Kedi konaklaması" : "Köpek konaklaması"}
                       </dt>
                       <dd className="mt-2">
-                        <span className="font-display text-3xl font-bold text-lamp tabular">{price !== null ? formatPrice(price) : "Klinikte"}</span>
+                        <span className="font-display text-3xl font-bold text-lamp tabular">{price !== null ? formatPrice(price) : "Otelde"}</span>
                         {price !== null && <span className="ml-1 text-night-muted">/ gece</span>}
                         <span className="mt-1 block text-sm text-night-muted">{boardingCapacity(clinic, sp)} misafir kapasitesi</span>
                       </dd>
@@ -225,17 +264,26 @@ export default async function ClinicPage({ params }: { params: Params }) {
         <aside className="space-y-6 lg:sticky lg:top-28 lg:self-start">
           {(canBook || species.length > 0) && (
             <section
-              aria-label="Randevu ve konaklama"
+              aria-label={kind === "hotel" ? "Konaklama" : bookLabel}
               className="hidden rounded-2xl border border-line bg-surface p-6 shadow-[0_6px_16px_rgba(0,0,0,0.12)] md:block"
             >
               <p className="text-lg">
-                {minPrice !== null ? (
+                {kind === "hotel" ? (
+                  nightlyFrom !== null ? (
+                    <>
+                      <span className="text-2xl font-semibold tabular">{formatPrice(nightlyFrom)}</span>
+                      <span className="text-stone"> / gece</span>
+                    </>
+                  ) : (
+                    <span className="font-semibold">Fiyatlar otelde</span>
+                  )
+                ) : minPrice !== null ? (
                   <>
                     <span className="text-2xl font-semibold tabular">{formatPrice(minPrice)}</span>
                     <span className="text-stone">&apos;den başlayan hizmetler</span>
                   </>
                 ) : (
-                  <span className="font-semibold">Fiyatlar klinikte</span>
+                  <span className="font-semibold">{kind === "sitter" ? "Fiyatlar sorulur" : "Fiyatlar klinikte"}</span>
                 )}
               </p>
               <p className={`mt-1 inline-flex items-center gap-2 text-sm ${status.open ? "font-medium text-pine" : "text-stone"}`}>
@@ -245,7 +293,7 @@ export default async function ClinicPage({ params }: { params: Params }) {
               <div className="mt-5 flex flex-col gap-3">
                 {canBook && (
                   <Link href={bookHref} className={buttonClass("primary", "lg", "w-full rounded-xl")}>
-                    Randevu al
+                    {bookLabel}
                   </Link>
                 )}
                 {species.length > 0 && (
@@ -254,13 +302,13 @@ export default async function ClinicPage({ params }: { params: Params }) {
                   </Link>
                 )}
               </div>
-              <p className="mt-4 text-center text-sm text-stone">Randevu ücretsizdir, ödemeyi klinikte yaparsın.</p>
+              <p className="mt-4 text-center text-sm text-stone">{PAY_NOTE[kind]}</p>
             </section>
           )}
 
           <section aria-labelledby="saatler" className="rounded-2xl border border-line bg-surface p-6">
             <h2 id="saatler" className="text-xl font-semibold">
-              Çalışma saatleri
+              {HOURS_TITLE[kind]}
             </h2>
             <dl className="mt-4 space-y-2.5">
               {weekSummary(clinic.workingHours).map((row) => (
@@ -273,18 +321,21 @@ export default async function ClinicPage({ params }: { params: Params }) {
                 </div>
               ))}
             </dl>
-            <p className="mt-5 border-t border-line pt-4 text-sm text-stone">
-              Online randevu en az {clinic.minNoticeMinutes >= 60 ? `${Math.round(clinic.minNoticeMinutes / 60)} saat` : `${clinic.minNoticeMinutes} dakika`} önceden
-              alınabilir. Takvim {clinic.maxDaysAhead} gün ilerisine kadar açık.
-            </p>
+            {kind !== "hotel" && (
+              <p className="mt-5 border-t border-line pt-4 text-sm text-stone">
+                Online {kind === "sitter" ? "ziyaret" : "randevu"} en az{" "}
+                {clinic.minNoticeMinutes >= 60 ? `${Math.round(clinic.minNoticeMinutes / 60)} saat` : `${clinic.minNoticeMinutes} dakika`} önceden alınabilir.
+                Takvim {clinic.maxDaysAhead} gün ilerisine kadar açık.
+              </p>
+            )}
           </section>
 
           <section aria-labelledby="iletisim" className="rounded-2xl border border-line bg-surface p-6">
             <h2 id="iletisim" className="text-xl font-semibold">
-              İletişim ve adres
+              {kind === "sitter" ? "İletişim ve hizmet bölgesi" : "İletişim ve adres"}
             </h2>
             <address className="mt-4 space-y-3 text-[0.95rem] not-italic">
-              <p>{clinic.address}</p>
+              <p>{kind === "sitter" ? `${clinic.address} (${clinic.city})` : clinic.address}</p>
               <p>
                 <a href={phoneHref(clinic.phone)} className="inline-flex items-center gap-2 font-medium text-pine hover:underline">
                   <Phone className="h-4 w-4" aria-hidden />
@@ -300,15 +351,17 @@ export default async function ClinicPage({ params }: { params: Params }) {
                 </p>
               )}
             </address>
-            <a
-              href={mapsUrl(clinic.name, clinic.address)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={buttonClass("secondary", "md", "mt-5 w-full")}
-            >
-              <MapPin className="h-4 w-4" aria-hidden />
-              Haritada aç
-            </a>
+            {kind !== "sitter" && (
+              <a
+                href={mapsUrl(clinic.name, clinic.address)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={buttonClass("secondary", "md", "mt-5 w-full")}
+              >
+                <MapPin className="h-4 w-4" aria-hidden />
+                Haritada aç
+              </a>
+            )}
           </section>
         </aside>
       </div>
@@ -316,21 +369,28 @@ export default async function ClinicPage({ params }: { params: Params }) {
       {/* Mobilde sabit randevu çubuğu */}
       {(canBook || species.length > 0) && (
         <div className="sticky bottom-0 z-30 -mx-4 mt-10 border-t border-line bg-surface/95 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6 md:hidden">
-          {minPrice !== null && (
-            <p className="mb-2 text-sm">
-              <span className="font-semibold tabular">{formatPrice(minPrice)}</span>
-              <span className="text-stone">&apos;den başlayan hizmetler</span>
-            </p>
-          )}
+          {kind === "hotel"
+            ? nightlyFrom !== null && (
+                <p className="mb-2 text-sm">
+                  <span className="font-semibold tabular">{formatPrice(nightlyFrom)}</span>
+                  <span className="text-stone"> / gece</span>
+                </p>
+              )
+            : minPrice !== null && (
+                <p className="mb-2 text-sm">
+                  <span className="font-semibold tabular">{formatPrice(minPrice)}</span>
+                  <span className="text-stone">&apos;den başlayan hizmetler</span>
+                </p>
+              )}
           <div className="flex gap-3">
             {canBook && (
               <Link href={bookHref} className={buttonClass("primary", "lg", "flex-1")}>
-                Randevu al
+                {bookLabel}
               </Link>
             )}
             {species.length > 0 && (
               <Link href={boardHref} className={buttonClass("night", "lg", "flex-1")}>
-                Pet otel
+                Konaklama iste
               </Link>
             )}
           </div>

@@ -8,44 +8,54 @@ import { PageHeader, EmptyState } from "@/components/panel/PageHeader";
 import { AgendaItem } from "@/components/panel/AgendaItem";
 import { BoardingActions } from "@/components/panel/BoardingActions";
 import { buttonClass } from "@/components/ui/Button";
+import type { Clinic } from "@/lib/db/schema";
 
 export const metadata = { title: "Bugün" };
 
 export default async function PanelHome() {
   const { clinic, user, isAdmin } = await requireClinicUser();
   const today = todayInIstanbul();
-  const [agenda, counts, boarding, svc, vetList] = await Promise.all([
+  const status = openStatus(clinic);
+  const firstName = user.name.split(" ")[0];
+  const greeting = (
+    <>
+      {formatDateLong(today)}. <span className={status.open ? "font-medium text-pine" : ""}>{status.label}.</span>
+    </>
+  );
+
+  if (clinic.kind === "hotel") {
+    return <HotelHome clinic={clinic} firstName={firstName} greeting={greeting} isAdmin={isAdmin} today={today} />;
+  }
+
+  // Veteriner kliniği ve pet sitter: randevu (ziyaret) takvimi
+  const sitter = clinic.kind === "sitter";
+  const [agenda, counts, svc, vetList] = await Promise.all([
     getDayAppointments(clinic.id, today),
     getDashboardCounts(clinic.id, today),
-    getBoardingOverview(clinic.id, today),
     getClinicServices(clinic.id),
     getClinicVets(clinic.id),
   ]);
   const active = agenda.filter((a) => a.status !== "cancelled");
-  const status = openStatus(clinic);
-  const needsSetup = svc.filter((s) => s.isActive).length === 0 || vetList.filter((v) => v.isActive).length === 0;
-  const firstName = user.name.split(" ")[0];
+  const hasService = svc.some((s) => s.isActive);
+  const hasVet = vetList.some((v) => v.isActive);
+  const needsSetup = !hasService || (!sitter && !hasVet) || (sitter && (!clinic.description || svc.some((s) => s.isActive && s.price === null)));
+  const word = sitter ? "ziyaret" : "randevu";
 
   const stats = [
-    { label: "Bugünkü randevu", value: counts.today, href: "/panel/randevular" },
+    { label: `Bugünkü ${word}`, value: counts.today, href: "/panel/randevular" },
     { label: "Önümüzdeki 7 gün", value: counts.week, href: "/panel/randevular" },
-    { label: "Onay bekleyen randevu", value: counts.pendingAppointments, href: "/panel/randevular", warn: counts.pendingAppointments > 0 },
-    { label: "Bekleyen konaklama talebi", value: counts.pendingBoarding, href: "/panel/konaklama", warn: counts.pendingBoarding > 0 },
+    { label: `Onay bekleyen ${word}`, value: counts.pendingAppointments, href: "/panel/randevular", warn: counts.pendingAppointments > 0 },
   ];
 
   return (
     <>
       <PageHeader
         title={`Merhaba ${firstName}`}
-        description={
-          <>
-            {formatDateLong(today)}. <span className={status.open ? "font-medium text-pine" : ""}>{status.label}.</span>
-          </>
-        }
+        description={greeting}
         actions={
           <Link href="/panel/randevular/yeni" className={buttonClass("primary", "md")}>
             <Plus className="h-4 w-4" aria-hidden />
-            Randevu ekle
+            {sitter ? "Ziyaret ekle" : "Randevu ekle"}
           </Link>
         }
       />
@@ -54,18 +64,27 @@ export default async function PanelHome() {
         <section aria-labelledby="kurulum" className="mb-8 rounded-panel border border-[#e9c46a] bg-lamp-soft p-6">
           <h2 id="kurulum" className="flex items-center gap-2 text-xl font-semibold">
             <CircleAlert className="h-5 w-5" aria-hidden />
-            Online randevuya başlamak için iki adım kaldı
+            {sitter ? "Profilini tamamla" : "Online randevuya başlamak için iki adım kaldı"}
           </h2>
           <ol className="mt-4 space-y-2">
-            <SetupStep done={svc.some((s) => s.isActive)} href="/panel/hizmetler" label="En az bir hizmet ekle (süre ve fiyatıyla)" isAdmin={isAdmin} />
-            <SetupStep done={vetList.some((v) => v.isActive)} href="/panel/ekip" label="Randevu alacak veterinerleri ekle" isAdmin={isAdmin} />
+            {sitter ? (
+              <>
+                <SetupStep done={hasService && svc.every((s) => !s.isActive || s.price !== null)} href="/panel/hizmetler" label="Hizmetlerine fiyat ve süre yaz" isAdmin={isAdmin} />
+                <SetupStep done={Boolean(clinic.description)} href="/panel/ayarlar" label="Profiline kendini tanıtan bir yazı ekle" isAdmin={isAdmin} />
+              </>
+            ) : (
+              <>
+                <SetupStep done={hasService} href="/panel/hizmetler" label="En az bir hizmet ekle (süre ve fiyatıyla)" isAdmin={isAdmin} />
+                <SetupStep done={hasVet} href="/panel/ekip" label="Randevu alacak veterinerleri ekle" isAdmin={isAdmin} />
+              </>
+            )}
           </ol>
         </section>
       )}
 
-      <dl className="mb-10 grid grid-cols-2 overflow-hidden rounded-panel border border-line bg-surface md:grid-cols-4">
+      <dl className="mb-10 grid grid-cols-1 overflow-hidden rounded-panel border border-line bg-surface sm:grid-cols-3">
         {stats.map((s, i) => (
-          <div key={s.label} className={`border-line p-5 ${i % 2 === 1 ? "border-l" : ""} ${i >= 2 ? "border-t md:border-t-0" : ""} ${i === 2 ? "md:border-l" : ""}`}>
+          <div key={s.label} className={`border-line p-5 ${i > 0 ? "border-t sm:border-t-0 sm:border-l" : ""}`}>
             <dt className="text-sm text-stone">{s.label}</dt>
             <dd className={`font-display mt-1 text-4xl font-bold tabular ${s.warn ? "text-[#a86b00]" : ""}`}>
               <Link href={s.href} className="hover:underline">
@@ -76,65 +95,130 @@ export default async function PanelHome() {
         ))}
       </dl>
 
-      <div className="grid grid-cols-1 gap-10 xl:grid-cols-[minmax(0,1fr)_360px]">
-        <section aria-labelledby="ajanda">
-          <div className="mb-4 flex items-baseline justify-between gap-4">
-            <h2 id="ajanda" className="text-2xl font-semibold">
-              Bugünün randevuları
-            </h2>
-            <Link href="/panel/randevular" className="text-sm font-semibold text-pine hover:underline">
-              Takvimi aç
-            </Link>
-          </div>
-          {active.length === 0 ? (
-            <EmptyState title="Bugün için randevu yok.">Telefonla gelen randevuları da &quot;Randevu ekle&quot; ile takvime işleyebilirsin.</EmptyState>
-          ) : (
-            <ul className="divide-y divide-line overflow-hidden rounded-panel border border-line bg-surface">
-              {agenda.map((a) => (
-                <AgendaItem key={a.id} a={a} />
-              ))}
-            </ul>
-          )}
-        </section>
-
-        <section aria-labelledby="otel-bugun" className="night self-start rounded-panel bg-night p-6 text-night-ink">
-          <h2 id="otel-bugun" className="flex items-center gap-2 text-2xl font-semibold">
-            <BedDouble className="h-6 w-6 text-lamp" aria-hidden />
-            Pet otel bugün
+      <section aria-labelledby="ajanda">
+        <div className="mb-4 flex items-baseline justify-between gap-4">
+          <h2 id="ajanda" className="text-2xl font-semibold">
+            {sitter ? "Bugünün ziyaretleri" : "Bugünün randevuları"}
           </h2>
-          {!clinic.boardingEnabled ? (
-            <p className="mt-3 text-night-muted">
-              Konaklama kapalı.{" "}
-              {isAdmin && (
-                <Link href="/panel/ayarlar#konaklama" className="font-semibold text-lamp underline">
-                  Ayarlardan aç
-                </Link>
-              )}
-            </p>
-          ) : (
-            <>
-              <dl className="mt-5 grid grid-cols-3 gap-3 text-center">
-                {[
-                  { label: "Konaklayan", value: boarding.staying.length + boarding.departures.length },
-                  { label: "Gelecek", value: boarding.arrivals.length },
-                  { label: "Ayrılacak", value: boarding.departures.length },
-                ].map((s) => (
-                  <div key={s.label} className="rounded-card bg-night-2 px-2 py-3">
-                    <dd className="font-display text-3xl font-bold text-lamp tabular">{s.value}</dd>
-                    <dt className="text-xs text-night-muted">{s.label}</dt>
-                  </div>
-                ))}
-              </dl>
-              <BoardingMiniList title="Bugün gelecekler" icon={<LogIn className="h-4 w-4" />} items={boarding.arrivals} today={today} />
-              <BoardingMiniList title="Bugün ayrılacaklar" icon={<LogOut className="h-4 w-4" />} items={boarding.departures} today={today} />
-              <BoardingMiniList title="Onay bekleyen talepler" icon={<CircleAlert className="h-4 w-4" />} items={boarding.pending} today={today} />
-              <Link href="/panel/konaklama" className="mt-6 inline-block font-semibold text-lamp hover:underline">
-                Tüm konaklamalar
-              </Link>
-            </>
-          )}
+          <Link href="/panel/randevular" className="text-sm font-semibold text-pine hover:underline">
+            Takvimi aç
+          </Link>
+        </div>
+        {active.length === 0 ? (
+          <EmptyState title={sitter ? "Bugün için ziyaret yok." : "Bugün için randevu yok."}>
+            {sitter
+              ? "Telefonla ya da mesajla gelen talepleri de \"Ziyaret ekle\" ile takvimine işleyebilirsin."
+              : "Telefonla gelen randevuları da \"Randevu ekle\" ile takvime işleyebilirsin."}
+          </EmptyState>
+        ) : (
+          <ul className="divide-y divide-line overflow-hidden rounded-panel border border-line bg-surface">
+            {agenda.map((a) => (
+              <AgendaItem key={a.id} a={a} sitter={sitter} />
+            ))}
+          </ul>
+        )}
+      </section>
+    </>
+  );
+}
+
+async function HotelHome({
+  clinic,
+  firstName,
+  greeting,
+  isAdmin,
+  today,
+}: {
+  clinic: Clinic;
+  firstName: string;
+  greeting: React.ReactNode;
+  isAdmin: boolean;
+  today: string;
+}) {
+  const boarding = await getBoardingOverview(clinic.id, today);
+  const needsSetup =
+    clinic.boardingCatCapacity + clinic.boardingDogCapacity === 0 ||
+    (clinic.boardingCatCapacity > 0 && clinic.boardingCatPrice === null) ||
+    (clinic.boardingDogCapacity > 0 && clinic.boardingDogPrice === null);
+  const stats = [
+    { label: "Konaklayan", value: boarding.staying.length + boarding.departures.length },
+    { label: "Bugün gelecek", value: boarding.arrivals.length },
+    { label: "Bugün ayrılacak", value: boarding.departures.length },
+    { label: "Onay bekleyen talep", value: boarding.pending.length, warn: boarding.pending.length > 0 },
+  ];
+
+  return (
+    <>
+      <PageHeader
+        title={`Merhaba ${firstName}`}
+        description={greeting}
+        actions={
+          <Link href="/panel/konaklama" className={buttonClass("night", "md")}>
+            <BedDouble className="h-4 w-4" aria-hidden />
+            Konaklamalar
+          </Link>
+        }
+      />
+
+      {needsSetup && (
+        <section aria-labelledby="kurulum" className="mb-8 rounded-panel border border-[#e9c46a] bg-lamp-soft p-6">
+          <h2 id="kurulum" className="flex items-center gap-2 text-xl font-semibold">
+            <CircleAlert className="h-5 w-5" aria-hidden />
+            Konaklama almaya başlamak için kapasite ve fiyatlarını gir
+          </h2>
+          <ol className="mt-4 space-y-2">
+            <SetupStep
+              done={!needsSetup}
+              href="/panel/ayarlar#konaklama"
+              label="Kedi ve köpek kapasitesini, gecelik fiyatlarını yaz"
+              isAdmin={isAdmin}
+            />
+          </ol>
         </section>
-      </div>
+      )}
+
+      {!clinic.boardingEnabled && (
+        <p className="mb-8 rounded-panel border border-line bg-surface p-5">
+          Şu anda yeni konaklama talebi almıyorsun.{" "}
+          {isAdmin && (
+            <Link href="/panel/ayarlar#konaklama" className="font-semibold text-pine underline">
+              Otel ayarlarından aç
+            </Link>
+          )}
+        </p>
+      )}
+
+      <dl className="mb-10 grid grid-cols-2 overflow-hidden rounded-panel border border-line bg-surface md:grid-cols-4">
+        {stats.map((s, i) => (
+          <div key={s.label} className={`border-line p-5 ${i % 2 === 1 ? "border-l" : ""} ${i >= 2 ? "border-t md:border-t-0" : ""} ${i === 2 ? "md:border-l" : ""}`}>
+            <dt className="text-sm text-stone">{s.label}</dt>
+            <dd className={`font-display mt-1 text-4xl font-bold tabular ${s.warn ? "text-[#a86b00]" : ""}`}>
+              <Link href="/panel/konaklama" className="hover:underline">
+                {s.value}
+              </Link>
+            </dd>
+          </div>
+        ))}
+      </dl>
+
+      <section aria-labelledby="otel-bugun" className="night rounded-panel bg-night p-6 text-night-ink sm:p-8">
+        <h2 id="otel-bugun" className="flex items-center gap-2 text-2xl font-semibold">
+          <BedDouble className="h-6 w-6 text-lamp" aria-hidden />
+          Otel bugün
+        </h2>
+        {boarding.arrivals.length + boarding.departures.length + boarding.pending.length === 0 ? (
+          <p className="mt-3 text-night-muted">Bugün giriş, çıkış ya da bekleyen talep yok.</p>
+        ) : (
+          <div className="grid grid-cols-1 gap-x-8 lg:grid-cols-3">
+            <BoardingMiniList title="Bugün gelecekler" icon={<LogIn className="h-4 w-4" />} items={boarding.arrivals} today={today} />
+            <BoardingMiniList title="Bugün ayrılacaklar" icon={<LogOut className="h-4 w-4" />} items={boarding.departures} today={today} />
+            <BoardingMiniList title="Onay bekleyen talepler" icon={<CircleAlert className="h-4 w-4" />} items={boarding.pending} today={today} />
+          </div>
+        )}
+        <Link href="/panel/konaklama" className="mt-6 inline-block font-semibold text-lamp hover:underline">
+          Tüm konaklamalar ve doluluk
+        </Link>
+      </section>
     </>
   );
 }

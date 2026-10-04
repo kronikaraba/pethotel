@@ -20,7 +20,8 @@ import { generateBookingCode } from "./codes";
 import { diffDays, todayInIstanbul } from "../time";
 
 export function boardingCapacity(clinic: Clinic, species: BoardingSpecies): number {
-  if (!clinic.boardingEnabled) return 0;
+  // Konaklama yalnızca pet otel hesabında vardır.
+  if (clinic.kind !== "hotel" || !clinic.boardingEnabled) return 0;
   return species === "cat" ? clinic.boardingCatCapacity : clinic.boardingDogCapacity;
 }
 
@@ -130,7 +131,7 @@ export async function createBoardingReservation(input: NewBoardingInput): Promis
   return db.transaction(async (tx) => {
     const [clinic] = await tx.select().from(clinics).where(eq(clinics.id, input.clinicId)).for("update");
     if (!clinic || clinic.status !== "active") throw new BookingError("CLINIC_NOT_FOUND");
-    if (!clinic.boardingEnabled) throw new BookingError("BOARDING_DISABLED");
+    if (clinic.kind !== "hotel" || !clinic.boardingEnabled) throw new BookingError("BOARDING_DISABLED");
 
     const quote = await getBoardingQuote({
       clinic,

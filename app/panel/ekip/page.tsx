@@ -6,7 +6,7 @@ import { VetManager } from "@/components/panel/VetManager";
 export const metadata = { title: "Ekip" };
 
 export default async function TeamPage() {
-  const { clinic } = await requireClinicUser({ adminOnly: true });
+  const { clinic } = await requireClinicUser({ adminOnly: true, kinds: ["vet"] });
   const vets = await getClinicVets(clinic.id);
   return (
     <>

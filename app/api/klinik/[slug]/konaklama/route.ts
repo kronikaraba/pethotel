@@ -18,7 +18,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ slug: strin
   if (!parsed.success) return NextResponse.json({ error: "Geçersiz istek." }, { status: 400 });
 
   const clinic = await getActiveClinicBySlug(slug);
-  if (!clinic || !clinic.boardingEnabled) {
+  if (!clinic || clinic.kind !== "hotel" || !clinic.boardingEnabled) {
     return NextResponse.json({ error: "Bu klinik konaklama kabul etmiyor." }, { status: 404 });
   }
   const quote = await getBoardingQuote({

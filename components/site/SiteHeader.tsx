@@ -5,16 +5,16 @@ import { MobileMenu } from "./MobileMenu";
 import { getCurrentUser } from "@/lib/auth/dal";
 
 export const NAV_LINKS = [
-  { href: "/klinikler", label: "Klinikler" },
-  { href: "/klinikler?otel=1", label: "Pet otel" },
-  { href: "/klinikler?hizmet=petsitter", label: "Pet sitter" },
+  { href: "/klinikler", label: "Veteriner" },
+  { href: "/klinikler?tur=otel", label: "Pet otel" },
+  { href: "/klinikler?tur=sitter", label: "Pet sitter" },
   { href: "/rezervasyonum", label: "Rezervasyonum" },
 ];
 
 export async function SiteHeader() {
   const user = await getCurrentUser();
   const panelHref = user ? (user.role === "superadmin" ? "/admin" : "/panel") : "/giris";
-  const panelLabel = user ? "Panele git" : "Klinik girişi";
+  const panelLabel = user ? "Panele git" : "Giriş yap";
 
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-surface/95 backdrop-blur supports-[backdrop-filter]:bg-surface/85">
@@ -33,10 +33,10 @@ export async function SiteHeader() {
         </nav>
         <div className="hidden items-center gap-1 md:flex">
           <Link
-            href="/klinik-basvuru"
+            href="/kayit"
             className="rounded-full px-4 py-2.5 text-[0.95rem] font-semibold text-ink transition-colors hover:bg-paper"
           >
-            Kliniğini ekle
+            Kayıt ol
           </Link>
           <Link
             href={panelHref}

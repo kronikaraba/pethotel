@@ -6,13 +6,19 @@ import { PanelNav } from "@/components/panel/PanelNav";
 import { requireClinicUser } from "@/lib/auth/dal";
 import { logoutAction } from "@/lib/actions/auth";
 import { getDashboardCounts } from "@/lib/data/panel";
-import { USER_ROLE_LABELS } from "@/lib/constants";
+import { BUSINESS_KIND_INFO, roleLabel } from "@/lib/constants";
 import { todayInIstanbul } from "@/lib/time";
 
 export const metadata: Metadata = {
-  title: { default: "Klinik paneli", template: "%s | PetHotel paneli" },
+  title: { default: "Panel", template: "%s | PetHotel paneli" },
   robots: { index: false },
 };
+
+const PENDING_TEXT = {
+  vet: "Onaylanınca kliniğin sitede listelenecek. Bu sürede hizmetlerini, ekibini ve çalışma saatlerini hazırlayabilirsin.",
+  hotel: "Onaylanınca otelin sitede listelenecek. Bu sürede kapasiteni, gecelik fiyatlarını ve fotoğraflarını hazırlayabilirsin.",
+  sitter: "Onaylanınca profilin sitede listelenecek. Bu sürede hizmetlerini, fiyatlarını ve uygun saatlerini hazırlayabilirsin.",
+} as const;
 
 export default async function PanelLayout({ children }: { children: React.ReactNode }) {
   const { user, clinic, isAdmin } = await requireClinicUser();
@@ -39,6 +45,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
           <div className="lg:hidden">{logout}</div>
         </div>
         <div className="px-4 pt-4 lg:px-5">
+          <p className="text-xs font-semibold text-stone">{BUSINESS_KIND_INFO[clinic.kind].panelTitle}</p>
           <p className="truncate font-semibold" title={clinic.name}>
             {clinic.name}
           </p>
@@ -52,11 +59,11 @@ export default async function PanelLayout({ children }: { children: React.ReactN
           </Link>
         </div>
         <div className="px-4 pt-4 pb-3 lg:flex-1 lg:overflow-y-auto lg:px-3 lg:pt-6">
-          <PanelNav isAdmin={isAdmin} badges={badges} />
+          <PanelNav isAdmin={isAdmin} kind={clinic.kind} badges={badges} />
         </div>
         <div className="hidden border-t border-line px-5 py-4 lg:block">
           <p className="truncate text-sm font-semibold">{user.name}</p>
-          <p className="truncate text-xs text-stone">{USER_ROLE_LABELS[user.role]}</p>
+          <p className="truncate text-xs text-stone">{roleLabel(user.role, clinic.kind)}</p>
           <div className="mt-2 -ml-3">{logout}</div>
         </div>
       </aside>
@@ -64,14 +71,15 @@ export default async function PanelLayout({ children }: { children: React.ReactN
       <div className="min-w-0">
         {clinic.status === "pending" && (
           <div className="border-b border-[#e9c46a] bg-lamp-soft px-4 py-3 text-sm text-[#5c4100] sm:px-8">
-            <strong className="font-semibold">Başvurun inceleniyor.</strong> Onaylanınca kliniğin sitede listelenecek. Bu sürede hizmetlerini, ekibini ve
-            çalışma saatlerini hazırlayabilirsin.
+            <strong className="font-semibold">Kaydın inceleniyor.</strong> {PENDING_TEXT[clinic.kind]}
           </div>
         )}
         {clinic.status === "suspended" && (
           <div className="border-b border-coral/30 bg-coral-soft px-4 py-3 text-sm text-coral sm:px-8">
-            <strong className="font-semibold">Kliniğin geçici olarak yayından kaldırıldı.</strong> Yeni online randevu alınamaz. Ayrıntı için platform
-            yöneticisiyle iletişime geç.
+            <strong className="font-semibold">
+              {clinic.kind === "sitter" ? "Profilin" : clinic.kind === "hotel" ? "Otelin" : "Kliniğin"} geçici olarak yayından kaldırıldı.
+            </strong>{" "}
+            Yeni online talep alınamaz. Ayrıntı için platform yöneticisiyle iletişime geç.
           </div>
         )}
         <main className="mx-auto max-w-6xl px-4 py-6 sm:px-8 lg:py-10">{children}</main>
