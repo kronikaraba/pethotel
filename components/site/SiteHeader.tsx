@@ -7,6 +7,7 @@ import { getCurrentUser } from "@/lib/auth/dal";
 export const NAV_LINKS = [
   { href: "/klinikler", label: "Klinikler" },
   { href: "/klinikler?otel=1", label: "Pet otel" },
+  { href: "/klinikler?hizmet=petsitter", label: "Pet sitter" },
   { href: "/rezervasyonum", label: "Rezervasyonum" },
 ];
 

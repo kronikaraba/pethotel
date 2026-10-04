@@ -7,6 +7,7 @@ const groups = [
     links: [
       { href: "/klinikler", label: "Klinik bul" },
       { href: "/klinikler?otel=1", label: "Pet otel" },
+      { href: "/klinikler?hizmet=petsitter", label: "Pet sitter" },
       { href: "/rezervasyonum", label: "Rezervasyonumu yönet" },
     ],
   },

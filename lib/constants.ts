@@ -69,6 +69,7 @@ export const SERVICE_CATEGORIES = [
   "cerrahi",
   "goruntuleme",
   "bakim",
+  "petsitter",
   "diger",
 ] as const;
 export type ServiceCategory = (typeof SERVICE_CATEGORIES)[number];
@@ -80,6 +81,7 @@ export const SERVICE_CATEGORY_LABELS: Record<ServiceCategory, string> = {
   cerrahi: "Cerrahi",
   goruntuleme: "Görüntüleme",
   bakim: "Tıraş ve bakım",
+  petsitter: "Pet sitter",
   diger: "Diğer",
 };
 

@@ -13,12 +13,14 @@ type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 function readFilters(sp: Record<string, string | string[] | undefined>) {
   const one = (k: string) => (typeof sp[k] === "string" ? (sp[k] as string).trim() : "");
   const city = one("sehir");
-  const category = one("hizmet");
+  // Ana sayfadaki arama sekmeleri: tur=otel → pet otel, tur=sitter → pet sitter hizmeti
+  const tur = one("tur");
+  const category = tur === "sitter" ? "petsitter" : tur === "otel" ? "" : one("hizmet");
   return {
     city: isCity(city) ? city : "",
     district: one("ilce").slice(0, 40),
     category: (SERVICE_CATEGORIES as readonly string[]).includes(category) ? (category as ServiceCategory) : undefined,
-    boarding: one("otel") === "1",
+    boarding: one("otel") === "1" || tur === "otel",
     q: one("q").slice(0, 60),
   };
 }
@@ -26,6 +28,7 @@ function readFilters(sp: Record<string, string | string[] | undefined>) {
 function headline(f: ReturnType<typeof readFilters>) {
   const where = f.district ? `${f.district}, ${f.city}` : f.city;
   if (f.boarding) return where ? `${where} pet otelleri` : "Pet otel hizmeti veren klinikler";
+  if (f.category === "petsitter") return where ? `${where} pet sitter hizmeti` : "Pet sitter hizmeti veren klinikler";
   if (f.category) return `${where ? `${where}: ` : ""}${SERVICE_CATEGORY_LABELS[f.category]} için klinikler`;
   return where ? `${where} veteriner klinikleri` : "Veteriner klinikleri";
 }
@@ -171,7 +174,7 @@ export default async function ClinicsPage({ searchParams }: { searchParams: Sear
           <ul className="grid grid-cols-1 gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {items.map((item) => (
               <li key={item.clinic.id}>
-                <ClinicCard item={item} focus={f.boarding ? "boarding" : "appointment"} />
+                <ClinicCard item={item} focus={f.boarding ? "boarding" : "appointment"} showServicePrice={Boolean(f.category)} />
               </li>
             ))}
           </ul>

@@ -62,6 +62,17 @@ describe("demo veriler", () => {
   });
 });
 
+describe("pet sitter", () => {
+  it("pet sitter araması bu hizmeti veren klinikleri getirir", async () => {
+    const { searchClinics } = await import("@/lib/data/public");
+    const items = await searchClinics({ category: "petsitter" });
+    expect(items.length).toBeGreaterThan(0);
+    expect(items.map((i) => i.clinic.slug)).toContain("moda-pati-veteriner");
+    expect(items.map((i) => i.clinic.slug)).not.toContain("atasehir-mirmir-veteriner");
+    expect(items.every((i) => i.categories.includes("petsitter"))).toBe(true);
+  });
+});
+
 describe("randevu", () => {
   it("aynı saate aynı veteriner için yalnızca bir randevu yazılır (eşzamanlı istek)", async () => {
     const date = openDayFrom(clinic, 3);

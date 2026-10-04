@@ -15,10 +15,13 @@ export function ClinicCard({
   item,
   focus = "appointment",
   maxSlots = 3,
+  showServicePrice = false,
 }: {
   item: ClinicListItem;
   focus?: "appointment" | "boarding";
   maxSlots?: number;
+  /** Hizmete göre filtrelenmiş listede kliniğin en düşük fiyatı yerine o hizmetin fiyatını göster. */
+  showServicePrice?: boolean;
 }) {
   const { clinic, minPrice, next, cover } = item;
   const status = openStatus(clinic);
@@ -92,6 +95,11 @@ export function ClinicCard({
           {focus === "boarding" && boardingFrom !== null ? (
             <>
               <span className="font-semibold tabular">{formatPrice(boardingFrom)}</span> <span className="text-stone">/ gece</span>
+            </>
+          ) : showServicePrice && next?.servicePrice != null ? (
+            <>
+              <span className="font-semibold tabular">{formatPrice(next.servicePrice)}</span>
+              <span className="text-stone"> başlangıç fiyatı</span>
             </>
           ) : minPrice !== null ? (
             <>

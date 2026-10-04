@@ -474,13 +474,23 @@ export function AppointmentWizard({
                       maxLength={120}
                     />
                   </Field>
-                  <Field id="notes" label="Kliniğe notun" optional error={errors.notes} className="sm:col-span-2">
+                  <Field
+                    id="notes"
+                    label={service?.category === "petsitter" ? "Adresin ve bakım notların" : "Kliniğe notun"}
+                    optional
+                    error={errors.notes}
+                    className="sm:col-span-2"
+                  >
                     <textarea
                       {...fieldAria("notes", errors.notes)}
                       className="input"
                       value={form.notes}
                       onChange={(e) => update("notes", e.target.value)}
-                      placeholder="Şikâyet, kullandığı ilaçlar ya da kliniğin bilmesini istediğin bir şey"
+                      placeholder={
+                        service?.category === "petsitter"
+                          ? "Bakıcının geleceği adres, mama ve ilaç düzeni, anahtar teslimi gibi bilgiler"
+                          : "Şikâyet, kullandığı ilaçlar ya da kliniğin bilmesini istediğin bir şey"
+                      }
                       maxLength={500}
                       rows={3}
                     />

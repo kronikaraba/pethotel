@@ -61,6 +61,7 @@ export async function getDistricts(city: string): Promise<string[]> {
 export type NextSlot = {
   serviceId: string;
   serviceName: string;
+  servicePrice: number | null;
   date: string;
   times: { start: number; label: string }[];
 };
@@ -149,6 +150,7 @@ async function enrich(
           next = {
             serviceId: service.id,
             serviceName: service.name,
+            servicePrice: service.price,
             date,
             times: slots.slice(0, opts.perClinic ?? 1).map((s) => ({ start: s.start, label: minutesToTime(s.start) })),
           };

@@ -31,6 +31,13 @@ const BASE_SERVICES: DemoService[] = [
   { name: "Ultrason", category: "goruntuleme", duration: 30, price: 1800 },
   { name: "Mikroçip uygulaması", category: "diger", duration: 15, price: 600 },
   { name: "Tıraş ve bakım", category: "bakim", duration: 60, price: 1500, description: "Banyo, tüy kesimi, tırnak ve kulak bakımı." },
+  {
+    name: "Evde bakım ziyareti",
+    category: "petsitter",
+    duration: 60,
+    price: 750,
+    description: "Klinik ekibinden bir bakıcı evine gelir: mama, su, kum kabı, ilaç, oyun ve kısa yürüyüş.",
+  },
 ];
 
 const weekdays = (open: string, close: string, extra?: Partial<WeekHours>, breakStart?: string, breakEnd?: string): WeekHours => {
